@@ -74,8 +74,11 @@ export default function KirimSurat({ warga, onNavigate }: Props) {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold text-gray-800">📝 Kirim Surat</h1>
+    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+      <div>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">📝 Kirim Surat</h1>
+        <p className="text-sm text-gray-500">Kirim surat ke Kemantren Tegalrejo</p>
+      </div>
 
       {/* Metode Selection */}
       <div className="grid grid-cols-2 gap-4">

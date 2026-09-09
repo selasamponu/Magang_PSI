@@ -35,32 +35,42 @@ export default function LogAktivitasPage() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-gray-800">📋 Log Aktivitas</h1>
-        <button onClick={refresh} className="px-4 py-2 bg-indigo-500 text-white rounded-lg text-sm hover:bg-indigo-600">Refresh</button>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">📋 Log Aktivitas</h1>
+          <p className="text-sm text-gray-500">{logs.length} aktivitas tercatat</p>
+        </div>
+        <button onClick={refresh} className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm hover:opacity-90 transition-all shadow-sm flex items-center justify-center gap-2">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+          Refresh
+        </button>
       </div>
 
       <input type="text" placeholder="Cari aktivitas atau user..." value={filter} onChange={e => setFilter(e.target.value)} className="w-full sm:w-64 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      {/* Desktop Table */}
+      <div className="hidden lg:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50">
+            <thead className="bg-gray-50/80">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">ID</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">User</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Tipe</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Aktivitas</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Detail</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Waktu</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">ID</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">User</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">Tipe</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">Aktivitas</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">Detail</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">Waktu</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {logs.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-8 text-gray-400">Belum ada log aktivitas</td></tr>
+                <tr><td colSpan={6} className="text-center py-12 text-gray-400">
+                  <div className="text-4xl mb-2">📋</div>
+                  <p>Belum ada log aktivitas</p>
+                </td></tr>
               ) : logs.map((l) => (
-                <tr key={l.id_log} className="hover:bg-gray-50">
+                <tr key={l.id_log} className="hover:bg-indigo-50/30 transition-colors">
                   <td className="px-4 py-3 font-mono text-xs max-w-[120px] truncate">{l.id_log}</td>
-                  <td className="px-4 py-3">{l.nama_user}</td>
+                  <td className="px-4 py-3 font-medium">{l.nama_user}</td>
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded text-xs ${l.user_type === 'user' ? 'bg-indigo-50 text-indigo-600' : 'bg-green-50 text-green-600'}`}>
                       {l.user_type}
@@ -78,6 +88,35 @@ export default function LogAktivitasPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="lg:hidden space-y-3">
+        {logs.length === 0 ? (
+          <div className="bg-white rounded-xl p-8 text-center border border-gray-100">
+            <div className="text-4xl mb-2">📋</div>
+            <p className="text-gray-400">Belum ada log aktivitas</p>
+          </div>
+        ) : logs.map((l) => (
+          <div key={l.id_log} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-2">
+            <div className="flex items-start justify-between">
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-800 truncate">{l.nama_user}</p>
+                <p className="text-xs text-gray-400 font-mono truncate">{l.id_log}</p>
+              </div>
+              <span className={`px-2 py-1 rounded-full text-xs font-medium ml-2 ${aktivitasBadge(l.aktivitas)}`}>
+                {l.aktivitas}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`px-2 py-0.5 rounded text-xs ${l.user_type === 'user' ? 'bg-indigo-50 text-indigo-600' : 'bg-green-50 text-green-600'}`}>
+                {l.user_type}
+              </span>
+              <span className="text-xs text-gray-400">{new Date(l.tanggal_waktu).toLocaleString('id-ID')}</span>
+            </div>
+            <p className="text-sm text-gray-600 line-clamp-2">{l.detail}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

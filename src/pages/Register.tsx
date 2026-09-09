@@ -50,12 +50,17 @@ export default function Register({ onRegisterSuccess, onGoLogin }: RegisterProps
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e]">
-      <div className="w-full max-w-md">
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] relative overflow-hidden">
+      <div className="absolute inset-0">
+        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl" />
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 sm:p-8 shadow-2xl">
           <div className="text-center mb-6">
-            <div className="text-5xl mb-3">📝</div>
-            <h1 className="text-xl font-bold text-white">Registrasi Warga</h1>
+            <div className="text-4xl sm:text-5xl mb-3">📝</div>
+            <h1 className="text-lg sm:text-xl font-bold text-white">Registrasi Warga</h1>
             <p className="text-purple-300 text-sm mt-1">Kemantren Tegalrejo</p>
           </div>
 
@@ -95,11 +100,11 @@ export default function Register({ onRegisterSuccess, onGoLogin }: RegisterProps
               <input type="password" name="confirmPassword" value={form.confirmPassword} onChange={handleChange} className="w-full px-3 py-2.5 bg-white/10 border border-white/20 rounded-xl text-white text-sm placeholder-purple-300/50 focus:outline-none focus:ring-2 focus:ring-purple-400" placeholder="Ulangi password" required />
             </div>
 
-            {error && <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-3 text-red-200 text-sm text-center">{error}</div>}
-            {success && <div className="bg-green-500/20 border border-green-400/30 rounded-xl p-3 text-green-200 text-sm text-center">{success}</div>}
+            {error && <div className="bg-red-500/20 border border-red-400/30 rounded-xl p-3 text-red-200 text-sm text-center animate-in">⚠️ {error}</div>}
+            {success && <div className="bg-green-500/20 border border-green-400/30 rounded-xl p-3 text-green-200 text-sm text-center animate-in">✅ {success}</div>}
 
-            <button type="submit" disabled={loading} className="w-full py-3 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-semibold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-purple-500/30">
-              {loading ? 'Memproses...' : 'Daftar'}
+            <button type="submit" disabled={loading} className="w-full py-3 bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-semibold rounded-xl hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-purple-500/30 text-sm sm:text-base">
+              {loading ? 'Memproses...' : '📝 Daftar'}
             </button>
           </form>
 
@@ -110,6 +115,8 @@ export default function Register({ onRegisterSuccess, onGoLogin }: RegisterProps
             </p>
           </div>
         </div>
+
+        <p className="text-center text-purple-400/50 text-xs mt-4">© 2024 Kemantren Tegalrejo</p>
       </div>
     </div>
   );
