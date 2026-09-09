@@ -1,1 +1,45 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: 'Poppins', sans-serif;
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c4b5fd;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8b5cf6;
+}
+
+/* Table responsive */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Selection color */
+::selection {
+  background-color: #7c3aed;
+  color: white;
+}
