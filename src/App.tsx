@@ -4,6 +4,7 @@ import { getAuth, logout } from './store/auth';
 import { AuthState } from './store/auth';
 import { User, Warga } from './types';
 import Layout from './components/Layout';
+import InstallPWA from './components/InstallPWA';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import DashboardAdmin from './pages/DashboardAdmin';
@@ -12,13 +13,13 @@ import SuratMasukPage from './pages/SuratMasuk';
 import SuratKeluarPage from './pages/SuratKeluar';
 import KelolaWarga from './pages/KelolaWarga';
 import KelolaUser from './pages/KelolaUser';
+import KelolaAplikasi from './pages/KelolaAplikasi';
 import LaporanPage from './pages/Laporan';
 import LogAktivitasPage from './pages/LogAktivitas';
 import KirimSurat from './pages/KirimSurat';
 import RiwayatSurat from './pages/RiwayatSurat';
 import VerifikasiSurat from './pages/VerifikasiSurat';
 
-// Initialize database
 initDB();
 
 export default function App() {
@@ -27,7 +28,6 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [verifikasiId, setVerifikasiId] = useState<string | null>(null);
 
-  // Cek URL /verifikasi/:id saat pertama kali load
   useEffect(() => {
     const path = window.location.pathname;
     const match = path.match(/^\/verifikasi\/(.+)$/);
@@ -59,7 +59,6 @@ export default function App() {
     setCurrentPage(p);
   };
 
-  // Render halaman verifikasi TANPA login
   if (verifikasiId) {
     return (
       <VerifikasiSurat
@@ -72,16 +71,24 @@ export default function App() {
     );
   }
 
-  // Render login/register
   if (page === 'login') {
-    return <Login onLoginSuccess={handleLoginSuccess} onGoRegister={() => setPage('register')} />;
+    return (
+      <>
+        <Login onLoginSuccess={handleLoginSuccess} onGoRegister={() => setPage('register')} />
+        <InstallPWA />
+      </>
+    );
   }
 
   if (page === 'register') {
-    return <Register onRegisterSuccess={() => setPage('login')} onGoLogin={() => setPage('login')} />;
+    return (
+      <>
+        <Register onRegisterSuccess={() => setPage('login')} onGoLogin={() => setPage('login')} />
+        <InstallPWA />
+      </>
+    );
   }
 
-  // Main App
   if (!auth.isLoggedIn || !auth.user) return null;
 
   const isAdmin = auth.userType === 'user';
@@ -107,6 +114,12 @@ export default function App() {
           ) : (
             <DashboardAdmin />
           );
+        case 'kelola-aplikasi':
+          return currentUser.role === 'admin' ? (
+            <KelolaAplikasi currentUser={currentUser} />
+          ) : (
+            <DashboardAdmin />
+          );
         case 'log-aktivitas':
           return currentUser.role === 'admin' ? <LogAktivitasPage /> : <DashboardAdmin />;
         default:
@@ -127,8 +140,11 @@ export default function App() {
   };
 
   return (
-    <Layout auth={auth} currentPage={currentPage} onNavigate={handleNavigate} onLogout={handleLogout}>
-      {renderPage()}
-    </Layout>
+    <>
+      <Layout auth={auth} currentPage={currentPage} onNavigate={handleNavigate} onLogout={handleLogout}>
+        {renderPage()}
+      </Layout>
+      <InstallPWA />
+    </>
   );
 }

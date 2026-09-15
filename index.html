@@ -2,10 +2,22 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <title>Aplikasi Surat - Kemantren Tegalrejo</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📬</text></svg>" />
+    
+    <meta name="description" content="Sistem Informasi Manajemen Surat Masuk & Keluar - Kemantren Tegalrejo Yogyakarta" />
+    <meta name="theme-color" content="#8B3A1A" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Surat Kemantren" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    
     <style>
       html, body {
         margin: 0;
@@ -13,15 +25,48 @@
         width: 100%;
         height: 100%;
         font-family: 'Poppins', sans-serif;
+        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior: none;
       }
       #root {
         width: 100%;
         height: 100%;
       }
+      #loading {
+        position: fixed;
+        inset: 0;
+        background: linear-gradient(135deg, #8B3A1A 0%, #7C2D12 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        z-index: 9999;
+        color: white;
+        font-family: 'Poppins', sans-serif;
+      }
+      #loading.hidden { display: none; }
+      .spinner {
+        width: 50px;
+        height: 50px;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top-color: white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 16px;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
+    
+    <div id="loading">
+      <div class="spinner"></div>
+      <p style="font-weight: 500;">Memuat Aplikasi Surat...</p>
+    </div>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

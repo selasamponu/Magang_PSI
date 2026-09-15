@@ -8,6 +8,7 @@ import {
   kategoriApi,
   logApi,
   dashboardApi,
+  pengaturanApi,
 } from '../api/suratApi';
 
 export function initDB() {
@@ -128,7 +129,8 @@ export const SuratMasukDB = {
 };
 
 // ================================================================
-// SURAT KELUAR// ================================================================
+// SURAT KELUAR
+// ================================================================
 export const SuratKeluarDB = {
   getAll: async (): Promise<SuratKeluar[]> => {
     try {
@@ -167,6 +169,23 @@ export const SuratKeluarDB = {
       now.getDate().toString().padStart(2, '0');
     const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
     return `SK-${dateStr}-${random}`;
+  },
+};
+
+// ================================================================
+// PENGATURAN APLIKASI
+// ================================================================
+export const SettingsDB = {
+  get: async (): Promise<any> => {
+    try {
+      return await pengaturanApi.get();
+    } catch {
+      return null;
+    }
+  },
+
+  update: async (data: any, file?: File): Promise<any> => {
+    return await pengaturanApi.update(data, file);
   },
 };
 

@@ -1,6 +1,6 @@
 // ================================================================
 // SERVER API - APLIKASI SURAT KEMANTREN TEGALREJO
-// Versi: 6.0.0 (FormData + Edit + Hapus + Auto-Selesai)
+// Versi: 7.0.0 (PWA + Settings + FormData + Edit + Hapus + Auto-Selesai)
 // ================================================================
 const express = require('express');
 const mysql = require('mysql2');
@@ -18,7 +18,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ================================================================
-// SETUP MULTER (Upload File)
+// SETUP MULTER
 // ================================================================
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -102,7 +102,7 @@ db.connect((err) => {
 // ================================================================
 
 app.get('/api/test', (req, res) => {
-  res.json({ success: true, message: 'API is running!', version: '6.0.0', timestamp: new Date().toISOString() });
+  res.json({ success: true, message: 'API is running!', version: '7.0.0', timestamp: new Date().toISOString() });
 });
 
 // ===== LOGIN =====
@@ -292,7 +292,6 @@ app.put('/api/surat-keluar/:id', upload.single('file'), (req, res) => {
   }
 });
 
-// ✅ UPDATE STATUS SURAT KELUAR (untuk auto-selesai saat warga buka)
 app.put('/api/surat-keluar/:id/status', (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -321,7 +320,51 @@ app.delete('/api/surat-keluar/:id', (req, res) => {
   });
 });
 
-// ===== WARGA =====
+// ================================================================
+// PENGATURAN APLIKASI
+// ================================================================
+app.get('/api/pengaturan', (req, res) => {
+  db.query('SELECT * FROM pengaturan ORDER BY id_pengaturan LIMIT 1', (err, results) => {
+    if (err) return res.status(500).json({ success: false, error: err.message });
+    if (results.length === 0) {
+      return res.json({ success: true, data: null });
+    }
+    res.json({ success: true, data: results[0] });
+  });
+});
+
+app.put('/api/pengaturan', upload.single('logo_file'), (req, res) => {
+  const { nama_aplikasi, nama_instansi, warna_tema, logo_url, favicon_url } = req.body;
+
+  let newLogoUrl = logo_url;
+  if (req.file) {
+    newLogoUrl = `/uploads/${req.file.filename}`;
+  }
+
+  const sql = `UPDATE pengaturan SET 
+    nama_aplikasi = ?, 
+    nama_instansi = ?, 
+    warna_tema = ?, 
+    logo_url = ?,
+    favicon_url = ?
+    WHERE id_pengaturan = 1`;
+
+  db.query(sql, [
+    nama_aplikasi, nama_instansi, warna_tema, newLogoUrl,
+    favicon_url || newLogoUrl
+  ], (err) => {
+    if (err) {
+      console.error('❌ DB error:', err.message);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+    console.log('✅ Pengaturan berhasil diupdate');
+    res.json({ success: true, message: 'Pengaturan berhasil diupdate!' });
+  });
+});
+
+// ================================================================
+// WARGA
+// ================================================================
 app.get('/api/warga', (req, res) => {
   db.query('SELECT * FROM warga ORDER BY nama_lengkap', (err, results) => {
     if (err) return res.status(500).json({ success: false, error: err.message });
@@ -363,7 +406,9 @@ app.delete('/api/warga/:nik', (req, res) => {
   });
 });
 
-// ===== USERS =====
+// ================================================================
+// USERS
+// ================================================================
 app.get('/api/users', (req, res) => {
   db.query('SELECT id, nama, username, role, status, tanggal_daftar FROM users ORDER BY id', (err, results) => {
     if (err) return res.status(500).json({ success: false, error: err.message });
@@ -405,7 +450,9 @@ app.delete('/api/users/:id', (req, res) => {
   });
 });
 
-// ===== KATEGORI =====
+// ================================================================
+// KATEGORI
+// ================================================================
 app.get('/api/kategori', (req, res) => {
   db.query('SELECT * FROM kategori ORDER BY nama_kategori', (err, results) => {
     if (err) return res.status(500).json({ success: false, error: err.message });
@@ -413,7 +460,9 @@ app.get('/api/kategori', (req, res) => {
   });
 });
 
-// ===== LOG AKTIVITAS =====
+// ================================================================
+// LOG AKTIVITAS
+// ================================================================
 app.get('/api/logs', (req, res) => {
   db.query('SELECT * FROM log_aktivitas ORDER BY tanggal_waktu DESC LIMIT 100', (err, results) => {
     if (err) return res.status(500).json({ success: false, error: err.message });
@@ -430,7 +479,9 @@ app.post('/api/logs', (req, res) => {
   });
 });
 
-// ===== DASHBOARD STATS =====
+// ================================================================
+// DASHBOARD STATS
+// ================================================================
 app.get('/api/dashboard/:type', (req, res) => {
   const { type } = req.params;
   const { userId } = req.query;

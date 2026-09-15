@@ -131,6 +131,29 @@ export const suratKeluarApi = {
 };
 
 // ================================================================
+// PENGATURAN APLIKASI
+// ================================================================
+export const pengaturanApi = {
+  get: async () => {
+    const res = await fetchApi('/pengaturan');
+    return res.data;
+  },
+
+  update: async (data: any, file?: File) => {
+    const formData = new FormData();
+    Object.keys(data).forEach((key) => {
+      if (data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
+    });
+    if (file) {
+      formData.append('logo_file', file);
+    }
+    return fetchFormData('/pengaturan', formData, 'PUT');
+  },
+};
+
+// ================================================================
 // WARGA
 // ================================================================
 export const wargaApi = {
