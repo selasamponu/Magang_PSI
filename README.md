@@ -1,267 +1,497 @@
-# 📬 Aplikasi Surat - Kemantren Tegalrejo
+# 📬 Aplikasi Surat Eksternal - Kemantren Tegalrejo
 
-Aplikasi pengelolaan surat masuk dan keluar untuk Kemantren Tegalrejo.
-
-## 🚀 Fitur Utama
-
-### ✅ Fitur yang Sudah Berfungsi
-1. **Login Multi-Role** - Admin, Operator, dan Warga
-2. **Dashboard Admin** - 6 KPI Cards dengan statistik real-time
-3. **Dashboard Warga** - 4 KPI Cards dengan ringkasan surat
-4. **Surat Masuk** - Dengan filter canggih (kategori, tanggal, bulan, tahun, rentang tanggal)
-5. **Surat Keluar** - Dengan QR Code otomatis
-6. **Kelola Warga** - CRUD lengkap dengan toggle status
-7. **Kelola User** - CRUD untuk admin/operator
-8. **Log Aktivitas** - Pencatatan semua aktivitas
-9. **Kirim Surat** - Upload file atau scan fisik
-10. **Riwayat Surat** - Untuk warga melihat surat mereka
-11. **Responsif** - Mobile-first design untuk semua halaman
-12. **Pencarian Lanjutan** - Filter multi-kriteria di Surat Masuk
-
-## 📱 Default Login
-
-| Role | Username | Password |
-|------|----------|----------|
-| Admin | admin | admin123 |
-| Operator | operator | operator123 |
-| Warga | (NIK) | (password saat registrasi) |
-
-## 🛠️ Teknologi
-
-- **Frontend**: React 18 + TypeScript + Vite
-- **Styling**: Tailwind CSS 4
-- **Storage**: localStorage (untuk demo/development)
-- **QR Code**: qrcode library
-- **Database Ready**: MySQL schema tersedia di `database/schema.sql`
-
-## 📦 Cara Menjalankan (Development/Local)
-
-### 1. Install Dependencies
-```bash
-npm install
-```
-
-### 2. Jalankan Development Server
-```bash
-npm run dev
-```
-
-### 3. Build untuk Production
-```bash
-npm run build
-```
-
-### 4. Preview Production Build
-```bash
-npm run preview
-```
-
-## 🗄️ Setup Database MySQL (XAMPP)
-
-### Langkah-langkah:
-
-1. **Start XAMPP** - Jalankan Apache dan MySQL
-
-2. **Buat Database** - Buka phpMyAdmin (http://localhost/phpmyadmin)
-   ```sql
-   CREATE DATABASE surat_kemantren CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   ```
-
-3. **Import Schema** - Jalankan file SQL:
-   ```bash
-   mysql -u root -p surat_kemantren < database/schema.sql
-   ```
-   Atau import melalui phpMyAdmin:
-   - Pilih database `surat_kemantren`
-   - Klik tab "Import"
-   - Upload file `database/schema.sql`
-   - Klik "Go"
-
-4. **Setup .env** - Copy file `.env.example` ke `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Edit file `.env` sesuai konfigurasi MySQL Anda:
-   ```env
-   DB_HOST=localhost
-   DB_USER=root
-   DB_PASSWORD=        # Isi jika MySQL punya password
-   DB_NAME=surat_kemantren
-   DB_PORT=3306
-   ```
-
-5. **Generate Password Hash** - Untuk membuat hash bcrypt yang valid:
-   ```javascript
-   // Jalankan di Node.js
-   const bcrypt = require('bcryptjs');
-   console.log(bcrypt.hashSync('admin123', 10));
-   ```
-   Copy hash yang dihasilkan dan update di tabel `users`.
-
-## 🌐 Deploy ke Server/Hosting
-
-### Opsi 1: Shared Hosting (cPanel)
-
-1. **Upload File** - Upload folder `dist/` ke `public_html/`
-2. **Setup Database** - Buat database MySQL di cPanel
-3. **Import Schema** - Import `database/schema.sql` melalui phpMyAdmin
-4. **Update Config** - Sesuaikan koneksi database di backend
-
-### Opsi 2: VPS/Cloud Server
-
-1. **Setup Environment**:
-   ```bash
-   # Install Node.js
-   curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-   sudo apt-get install -y nodejs
-   
-   # Install MySQL
-   sudo apt-get install mysql-server
-   
-   # Install Nginx
-   sudo apt-get install nginx
-   ```
-
-2. **Setup Database**:
-   ```bash
-   sudo mysql -u root -p
-   CREATE DATABASE surat_kemantren CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   USE surat_kemantren;
-   SOURCE /path/to/database/schema.sql;
-   ```
-
-3. **Build & Deploy**:
-   ```bash
-   npm install
-   npm run build
-   
-   # Copy dist/ ke /var/www/html/
-   sudo cp -r dist/* /var/www/html/
-   ```
-
-4. **Setup Nginx**:
-   ```nginx
-   server {
-       listen 80;
-       server_name yourdomain.com;
-       root /var/www/html;
-       index index.html;
-       
-       location / {
-           try_files $uri $uri/ /index.html;
-       }
-   }
-   ```
-
-### Opsi 3: Docker
-
-```dockerfile
-# Dockerfile
-FROM node:18-alpine as build
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-```bash
-docker build -t surat-kemantren .
-docker run -p 80:80 surat-kemantren
-```
-
-## 📂 Struktur Database
-
-### Tabel Utama:
-- `users` - Admin & Operator
-- `warga` - Data warga
-- `surat_masuk` - Surat masuk dari warga
-- `surat_keluar` - Surat keluar dari kemantren
-- `kategori` - Kategori surat (9 kategori default)
-- `log_aktivitas` - Log semua aktivitas
-
-### Index untuk Performa:
-- `idx_status` pada surat_masuk
-- `idx_kategori` pada surat_masuk
-- `idx_tanggal` pada surat_masuk & surat_keluar
-- `idx_pengirim` pada surat_masuk
-- `idx_penerima` pada surat_keluar
-
-## 🔍 Fitur Filter Surat Masuk
-
-Filter yang tersedia:
-- ✅ **Pencarian Teks** - ID, nama pengirim, NIK, perihal
-- ✅ **Kategori** - Filter berdasarkan 9 kategori surat
-- ✅ **Status** - Terkirim, Dibaca, Diverifikasi, Ditolak
-- ✅ **Metode** - Scan atau Upload
-- ✅ **Tahun** - Filter berdasarkan tahun
-- ✅ **Bulan** - Filter berdasarkan bulan (Januari - Desember)
-- ✅ **Rentang Tanggal** - Dari tanggal sampai tanggal
-- ✅ **Pagination** - 10 data per halaman
-
-## 📱 Responsive Design
-
-Aplikasi ini menggunakan **mobile-first approach**:
-- **Mobile** (< 640px): Card layout, sidebar drawer
-- **Tablet** (640px - 1024px): Mixed layout
-- **Desktop** (> 1024px): Full table layout, sidebar fixed
-
-## 🔐 Keamanan
-
-- Password di-hash dengan bcrypt
-- JWT token untuk autentikasi (6 jam)
-- Role-based access control (RBAC)
-- Input validation di semua form
-- File upload dibatasi 5MB
-
-## 📝 Catatan Penting
-
-### Untuk Development (Sekarang):
-- Aplikasi menggunakan **localStorage** sebagai database
-- Data tersimpan di browser, tidak hilang saat refresh
-- Cocok untuk demo dan testing
-
-### Untuk Production (Nanti):
-- Ganti localStorage dengan MySQL
-- Gunakan file `database/schema.sql` yang sudah disediakan
-- Setup backend API (Node.js + Express)
-- Konfigurasi `.env` sesuai server
-
-## 🐛 Troubleshooting
-
-### Database tidak terkoneksi:
-- Pastikan MySQL berjalan di XAMPP
-- Cek username/password di `.env`
-- Pastikan database `surat_kemantren` sudah dibuat
-
-### Password tidak bisa login:
-- Generate ulang hash bcrypt
-- Update di tabel `users`
-- Default: admin/admin123, operator/operator123
-
-### Build error:
-```bash
-rm -rf node_modules package-lock.json
-npm install
-npm run build
-```
-
-## 📞 Support
-
-Untuk pertanyaan atau bantuan:
-- Email: support@kemantren-tegalrejo.go.id
-- Website: www.kemantren-tegalrejo.go.id
-
-## 📄 Lisensi
-
-© 2026 Kemantren Tegalrejo. All rights reserved.
+Sistem Informasi Manajemen Surat Masuk & Surat Keluar Berbasis Web
+Dikembangkan untuk Kemantren Tegalrejo Yogyakarta
 
 ---
 
-**Dibuat dengan ❤️ untuk Kemantren Tegalrejo**
+## 📖 Daftar Isi
+
+1. [Tentang Aplikasi](#tentang-aplikasi)
+2. [Fitur Lengkap](#fitur-lengkap)
+3. [Arsitektur Sistem](#arsitektur-sistem)
+4. [Teknologi](#teknologi)
+5. [Struktur Folder](#struktur-folder)
+6. [Struktur Database](#struktur-database)
+7. [Cara Menjalankan](#cara-menjalankan)
+8. [Default Login](#default-login)
+9. [Panduan Penggunaan](#panduan-penggunaan)
+10. [API Endpoints](#api-endpoints)
+11. [Keamanan](#keamanan)
+12. [Troubleshooting](#troubleshooting)
+13. [Deploy](#deploy)
+14. [Statistik](#statistik)
+15. [Lisensi](#lisensi)
+
+---
+
+## 📖 Tentang Aplikasi
+
+Aplikasi Surat Eksternal adalah sistem informasi berbasis web untuk mengelola surat masuk dan surat keluar di Kemantren Tegalrejo Yogyakarta.
+
+### Tujuan
+1. Digitalisasi layanan surat
+2. Efisiensi pengelolaan
+3. Transparansi status
+4. Keamanan data dengan QR Code
+5. Pelaporan otomatis
+
+---
+
+## ✨ Fitur Lengkap
+
+### Autentikasi
+- Login Multi-Role (Admin, Operator, Warga)
+- Registrasi Warga (NIK 16 digit)
+- Session Management
+- Role-Based Access
+- Log Aktivitas
+
+### Dashboard
+- Admin: 6 KPI Cards, statistik real-time
+- Warga: 4 KPI Cards, ringkasan surat
+
+### Surat Masuk
+- Kirim surat (upload file max 5MB)
+- 15 kategori surat
+- Verifikasi operator
+- Filter lanjutan
+- Pagination 10 per halaman
+
+### Surat Keluar
+- Buat surat balasan
+- Edit surat
+- Hapus surat
+- Auto-selesai saat dibaca
+- Download file
+
+### Riwayat Surat
+- Tab Surat Masuk
+- Tab Surat Balasan
+- Auto-update status
+- Filter status
+
+### Kelola Data
+- CRUD Warga
+- CRUD User
+- Pencarian
+
+### Log Aktivitas
+- Pencatatan otomatis
+- Filter
+- Detail log
+
+### Laporan
+- 5 jenis laporan
+- Filter tanggal
+- Kop surat otomatis
+- Format A4 Landscape
+- Save as PDF
+
+### Verifikasi QR
+- Publik tanpa login
+- Cek keaslian surat
+
+---
+
+## 🏗️ Arsitektur Sistem
+
+Frontend: React 18 + TypeScript + Vite (Port 3000)
+Backend: Node.js + Express + Multer (Port 5000)
+Database: MySQL (Port 3306)
+Storage: Folder /uploads
+
+Alur Data:
+Warga kirim surat → File disimpan di /uploads → Data di surat_masuk → Operator verifikasi → Admin buat balasan → Data di surat_keluar → Warga buka/download → Status auto selesai → Log tercatat
+
+---
+
+## 🛠️ Teknologi
+
+### Frontend
+- React 18.2
+- TypeScript 5.7
+- Vite 6.3
+- Tailwind CSS 4.1
+- React Router 6.8
+- QRCode 1.5
+- date-fns 2.30
+- lucide-react 0.294
+- framer-motion 11.16
+- recharts 2.10
+
+### Backend
+- Node.js ≥18
+- Express.js 5.2
+- MySQL2 3.24
+- Multer 2.3
+- QRCode 1.5
+- CORS 2.8
+- dotenv 17.4
+
+### Database
+- MySQL 8.0+
+- XAMPP (development)
+
+---
+
+## 📂 Struktur Folder
+
+src/
+├── api/suratApi.ts
+├── components/Layout.tsx
+├── components/Modal.tsx
+├── pages/Login.tsx
+├── pages/Register.tsx
+├── pages/DashboardAdmin.tsx
+├── pages/DashboardWarga.tsx
+├── pages/SuratMasuk.tsx
+├── pages/SuratKeluar.tsx
+├── pages/KirimSurat.tsx
+├── pages/RiwayatSurat.tsx
+├── pages/KelolaWarga.tsx
+├── pages/KelolaUser.tsx
+├── pages/LogAktivitas.tsx
+├── pages/Laporan.tsx
+├── pages/VerifikasiSurat.tsx
+├── store/auth.ts
+├── store/db.ts
+├── types/index.ts
+├── utils/downloadFile.ts
+├── App.tsx
+├── main.tsx
+└── index.css
+
+uploads/ (file surat)
+public/logo.png
+database/schema.sql
+server.cjs
+package.json
+vite.config.js
+tsconfig.json
+index.html
+.env
+README.md
+
+---
+
+## 🗄️ Struktur Database
+
+### Tabel users
+- id (PK, AI)
+- nama VARCHAR(100)
+- username VARCHAR(50) UNIQUE
+- password VARCHAR(255)
+- role ENUM(admin, operator)
+- status ENUM(aktif, nonaktif)
+- tanggal_daftar DATETIME
+
+### Tabel warga
+- nik VARCHAR(16) PK
+- nama_lengkap VARCHAR(100)
+- alamat TEXT
+- rt VARCHAR(5)
+- rw VARCHAR(5)
+- no_hp VARCHAR(15)
+- password VARCHAR(255)
+- status ENUM(aktif, nonaktif)
+- tanggal_daftar DATETIME
+- terakhir_login DATETIME
+
+### Tabel surat_masuk
+- id_surat VARCHAR(20) PK
+- nik_pengirim VARCHAR(16) FK
+- nama_pengirim VARCHAR(100)
+- metode ENUM(scan, upload)
+- kategori VARCHAR(50)
+- perihal VARCHAR(255)
+- file_url LONGTEXT
+- file_name VARCHAR(255)
+- file_type VARCHAR(100)
+- file_size INT
+- catatan TEXT
+- status ENUM(terkirim, dibaca, diverifikasi, ditolak)
+- tanggal_kirim DATETIME
+- tanggal_verifikasi DATETIME
+- diverifikasi_oleh VARCHAR(100)
+- alasan_tolak TEXT
+
+### Tabel surat_keluar
+- id_surat_keluar VARCHAR(20) PK
+- nik_penerima VARCHAR(16) FK
+- nama_penerima VARCHAR(100)
+- nomor_surat VARCHAR(50)
+- perihal VARCHAR(255)
+- file_url LONGTEXT
+- file_name VARCHAR(255)
+- file_type VARCHAR(100)
+- file_size INT
+- qr_code_url LONGTEXT
+- tanggal_kirim DATETIME
+- status ENUM(terkirim, dibaca, selesai)
+
+### Tabel kategori
+- id_kategori INT PK AI
+- nama_kategori VARCHAR(50) UNIQUE
+- deskripsi TEXT
+
+15 Kategori Default:
+1. Surat Edaran
+2. Surat Biasa
+3. Surat Perintah
+4. Surat Tugas
+5. Surat Undangan
+6. Pengumuman
+7. Laporan
+8. Telaah Staff
+9. Surat Keterangan
+10. Surat Keterangan Melaksanakan Tugas
+11. Surat Panggilan
+12. Nota Dinas
+13. Rekomendasi
+14. Surat Perjalanan Dinas
+15. Surat Cuti
+
+### Tabel log_aktivitas
+- id_log VARCHAR(30) PK
+- user_id VARCHAR(16)
+- nama_user VARCHAR(100)
+- user_type ENUM(user, warga)
+- aktivitas VARCHAR(50)
+- detail TEXT
+- ip_address VARCHAR(45)
+- tanggal_waktu DATETIME
+
+---
+
+## 🚀 Cara Menjalankan
+
+### Persyaratan
+- Node.js ≥18
+- NPM ≥9
+- MySQL ≥8
+- XAMPP
+- Browser modern
+
+### Langkah 1: Install
+npm install
+npm install multer
+
+### Langkah 2: Setup Database
+1. Start XAMPP (Apache + MySQL)
+2. Buka phpMyAdmin
+3. Buat database surat_kemantren
+4. Import database/schema.sql
+
+### Langkah 3: Setup .env
+PORT=5000
+NODE_ENV=development
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=surat_kemantren
+DB_PORT=3306
+UPLOAD_PATH=./uploads
+MAX_FILE_SIZE=5242880
+
+### Langkah 4: Jalankan
+npm start
+
+### Langkah 5: Buka
+http://localhost:3000
+
+---
+
+## 📱 Default Login
+
+Admin: admin / admin123
+Operator: operator / operator123
+Warga: NIK / password registrasi
+
+---
+
+## 📖 Panduan Penggunaan
+
+### Warga
+1. Registrasi
+2. Login
+3. Kirim Surat
+4. Lihat Riwayat
+5. Download File
+
+### Admin
+1. Dashboard
+2. Surat Masuk
+3. Surat Keluar
+4. Kelola Warga
+5. Kelola User
+6. Laporan
+7. Log Aktivitas
+
+### Operator
+1. Login
+2. Verifikasi Surat
+3. Buat Surat Keluar
+4. Laporan
+
+---
+
+## 📊 API Endpoints
+
+Auth:
+- POST /api/login
+- POST /api/register
+
+Surat Masuk:
+- GET /api/surat-masuk
+- POST /api/surat-masuk
+- PUT /api/surat-masuk/:id/status
+- DELETE /api/surat-masuk/:id
+
+Surat Keluar:
+- GET /api/surat-keluar
+- POST /api/surat-keluar
+- PUT /api/surat-keluar/:id
+- PUT /api/surat-keluar/:id/status
+- DELETE /api/surat-keluar/:id
+
+Warga:
+- GET /api/warga
+- POST /api/warga
+- PUT /api/warga/:nik
+- DELETE /api/warga/:nik
+
+User:
+- GET /api/users
+- POST /api/users
+- PUT /api/users/:id
+- DELETE /api/users/:id
+
+Lainnya:
+- GET /api/kategori
+- GET /api/logs
+- POST /api/logs
+- GET /api/dashboard/:type
+
+---
+
+## 🔐 Keamanan
+
+- Password: plain text (dev), production pakai bcrypt
+- Session: localStorage
+- CORS: dikonfigurasi untuk LAN
+- File Upload: max 10MB, validasi MIME
+- SQL Injection: prepared statement
+- Role-Based Access: Admin, Operator, Warga
+- Log Audit: semua aksi tercatat
+- QR Verification: verifikasi keaslian surat
+
+---
+
+## 🐛 Troubleshooting
+
+Error: Cannot find module 'multer'
+Solusi: npm install multer
+
+Error: ECONNRESET saat upload
+Solusi: Buka C:\xampp\mysql\bin\my.ini, tambah max_allowed_packet=64M, restart MySQL
+
+Error: File harus diupload!
+Solusi: Cek file sudah dipilih, server.cjs pakai multer, KirimSurat.tsx pakai fileObject
+
+Error: Failed to fetch
+Solusi: Backend tidak jalan → npm start, cek IP di suratApi.ts
+
+Error: File corrupt
+Solusi: Pastikan server.cjs pakai multer, cek folder uploads/, cek file_url di database
+
+Error: Database tidak connect
+Solusi: Pastikan MySQL running, cek .env, pastikan database sudah dibuat
+
+---
+
+## 🌐 Deploy
+
+### Server Gratis
+- DCloud XPlore 2026: 3 bulan gratis, VM 2 vCPU, 4GB RAM
+- Oracle Cloud Free: selamanya, 4 CPU, 24GB RAM
+- Railway: $5/bulan
+- Render: 750 jam
+
+### Langkah Deploy VPS
+1. Setup server Ubuntu 22.04
+2. Install Node.js, MySQL, Nginx
+3. Upload kode
+4. Setup database
+5. Setup .env
+6. npm install && npm start
+7. Setup Nginx reverse proxy
+8. SSL via Let's Encrypt
+
+### Contoh Nginx Config
+server {
+    listen 80;
+    server_name surat-kemantren.go.id;
+    location / {
+        proxy_pass http://localhost:3000;
+    }
+    location /api {
+        proxy_pass http://localhost:5000;
+    }
+    location /uploads {
+        proxy_pass http://localhost:5000;
+    }
+}
+
+---
+
+## 📈 Statistik
+
+- Total Halaman: 13
+- Total API Endpoint: 24
+- Total Tabel Database: 6
+- Total Kategori Surat: 15
+- Total Role User: 3
+- Total Fitur Utama: 12
+
+---
+
+## 🔮 Pengembangan Selanjutnya
+
+- Password hashing bcrypt
+- JWT authentication
+- Email notification
+- WhatsApp notification
+- Chart dashboard interaktif
+- Export Excel
+- Backup otomatis
+- Multi-bahasa
+- Dark mode
+- API documentation
+
+---
+
+## 🤝 Kontribusi
+
+Dikembangkan untuk Kemantren Tegalrejo Yogyakarta.
+- Email: support@kemantren-tegalrejo.go.id
+- Website: www.kemantren-tegalrejo.go.id
+
+---
+
+## 📄 Lisensi
+
+© 2026 Kemantren Tegalrejo Yogyakarta. All rights reserved.
+
+---
+
+## 🙏 Ucapan Terima Kasih
+
+Terima kasih kepada:
+- Kemantren Tegalrejo Yogyakarta
+- Tim Developer
+- Open Source Community
+
+---
+
+Dibuat dengan ❤️ untuk Kemantren Tegalrejo Yogyakarta
