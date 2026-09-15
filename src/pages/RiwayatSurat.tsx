@@ -1,143 +1,721 @@
 import { useState, useEffect } from 'react';
-import { SuratMasukDB } from '../store/db';
-import { Warga, SuratMasuk } from '../types';
+import { SuratMasukDB, SuratKeluarDB } from '../store/db';
+import { Warga, SuratMasuk, SuratKeluar } from '../types';
+import Modal from '../components/Modal';
 
 interface Props {
   warga: Warga;
 }
 
-export default function RiwayatSurat({ warga }: Props) {
-  const [suratList, setSuratList] = useState<SuratMasuk[]>([]);
-  const [selectedSurat, setSelectedSurat] = useState<SuratMasuk | null>(null);
-  const [showDetail, setShowDetail] = useState(false);
+type TabType = 'masuk' | 'keluar';
 
-  const refresh = () => {
-    const data = SuratMasukDB.getByNik(warga.nik);
-    setSuratList(data.sort((a, b) => new Date(b.tanggal_kirim).getTime() - new Date(a.tanggal_kirim).getTime()));
+export default function RiwayatSurat({ warga }: Props) {
+  const [suratMasukList, setSuratMasukList] = useState<SuratMasuk[]>([]);
+  const [suratKeluarList, setSuratKeluarList] = useState<SuratKeluar[]>([]);
+  const [activeTab, setActiveTab] = useState<TabType>('masuk');
+  const [selectedSuratMasuk, setSelectedSuratMasuk] = useState<SuratMasuk | null>(null);
+  const [selectedSuratKeluar, setSelectedSuratKeluar] = useState<SuratKeluar | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('');
+
+  // ✅ REFRESH: Ambil surat masuk + surat keluar milik warga ini
+  const refresh = async () => {
+    try {
+      setLoading(true);
+
+      // Surat masuk dari warga
+      const masukData = await SuratMasukDB.getByNik(warga.nik);
+      setSuratMasukList(
+        masukData.sort(
+          (a: SuratMasuk, b: SuratMasuk) =>
+            new Date(b.tanggal_kirim).getTime() - new Date(a.tanggal_kirim).getTime()
+        )
+      );
+
+      // Surat keluar yang ditujukan ke warga (balasan)
+      const keluarData = await SuratKeluarDB.getAll();
+      setSuratKeluarList(
+        keluarData
+          .filter((s: SuratKeluar) => s.nik_penerima === warga.nik)
+          .sort(
+            (a: SuratKeluar, b: SuratKeluar) =>
+              new Date(b.tanggal_kirim).getTime() - new Date(a.tanggal_kirim).getTime()
+          )
+      );
+    } catch (err) {
+      console.error('Error loading riwayat:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+  }, [filterStatus]);
 
-  const statusBadge = (status: string) => {
+  // ================================================================
+  // BADGE & ICON
+  // ================================================================
+  const statusBadgeMasuk = (status: string) => {
     const map: Record<string, string> = {
-      terkirim: 'bg-blue-100 text-blue-700',
-      dibaca: 'bg-blue-100 text-blue-700',
-      diverifikasi: 'bg-green-100 text-green-700',
-      ditolak: 'bg-red-100 text-red-700',
+      terkirim: 'bg-blue-100 text-blue-700 border border-blue-200',
+      dibaca: 'bg-sky-100 text-sky-700 border border-sky-200',
+      diverifikasi: 'bg-green-100 text-green-700 border border-green-200',
+      ditolak: 'bg-red-100 text-red-700 border border-red-200',
     };
-    return map[status] || 'bg-gray-100 text-gray-700';
+    return map[status] || 'bg-gray-100 text-gray-700 border border-gray-200';
+  };
+
+  const statusIconMasuk = (status: string) => {
+    const map: Record<string, string> = {
+      terkirim: '📤',
+      dibaca: '👁️',
+      diverifikasi: '✅',
+      ditolak: '❌',
+    };
+    return map[status] || '📄';
+  };
+
+  const statusBadgeKeluar = (status: string) => {
+    const map: Record<string, string> = {
+      terkirim: 'bg-indigo-100 text-indigo-700 border border-indigo-200',
+      dibaca: 'bg-sky-100 text-sky-700 border border-sky-200',
+      selesai: 'bg-green-100 text-green-700 border border-green-200',
+    };
+    return map[status] || 'bg-gray-100 text-gray-700 border border-gray-200';
+  };
+
+  const statusIconKeluar = (status: string) => {
+    const map: Record<string, string> = {
+      terkirim: '📬',
+      dibaca: '👁️',
+      selesai: '✅',
+    };
+    return map[status] || '📄';
+  };
+
+  // ================================================================
+  // FILTER
+  // ================================================================
+  const filteredSuratMasuk = filterStatus
+    ? suratMasukList.filter((s) => s.status === filterStatus)
+    : suratMasukList;
+
+  const filteredSuratKeluar = filterStatus
+    ? suratKeluarList.filter((s) => s.status === filterStatus)
+    : suratKeluarList;
+
+  // ================================================================
+  // STATS
+  // ================================================================
+  const statsMasuk = {
+    total: suratMasukList.length,
+    terkirim: suratMasukList.filter((s) => s.status === 'terkirim').length,
+    diverifikasi: suratMasukList.filter((s) => s.status === 'diverifikasi').length,
+    ditolak: suratMasukList.filter((s) => s.status === 'ditolak').length,
+  };
+
+  const statsKeluar = {
+    total: suratKeluarList.length,
+    terkirim: suratKeluarList.filter((s) => s.status === 'terkirim').length,
+    selesai: suratKeluarList.filter((s) => s.status === 'selesai').length,
+  };
+
+  // ================================================================
+  // DOWNLOAD HANDLER
+  // ================================================================
+  const handleDownload = (fileUrl: string, fileName: string) => {
+    if (!fileUrl) {
+      alert('File tidak tersedia!');
+      return;
+    }
+
+    // Handle URL relative /uploads/
+    let fullUrl = fileUrl;
+    if (fileUrl.startsWith('/uploads/')) {
+      fullUrl = `http://${window.location.hostname}:5000${fileUrl}`;
+    }
+
+    const a = document.createElement('a');
+    a.href = fullUrl;
+    a.download = fileName || 'surat';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">📜 Riwayat Surat Saya</h1>
-          <p className="text-sm text-gray-500">{suratList.length} surat tercatat</p>
+          <h1 className="text-2xl sm:text-3xl font-bold gradient-text">📜 Riwayat Surat Saya</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            {statsMasuk.total} surat masuk • {statsKeluar.total} surat balasan
+          </p>
         </div>
-        <button onClick={refresh} className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm hover:opacity-90 transition-all shadow-sm flex items-center justify-center gap-2">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-          Refresh
+        <button
+          onClick={refresh}
+          disabled={loading}
+          className="w-full sm:w-auto px-5 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 disabled:opacity-50 hover-scale"
+        >
+          <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {loading ? 'Loading...' : 'Refresh'}
         </button>
       </div>
 
-      {/* Desktop Table */}
-      <div className="hidden sm:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50/80">
-              <tr>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">ID</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">Kategori</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">Perihal</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">Status</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">Tanggal</th>
-                <th className="text-center px-4 py-3 font-semibold text-gray-600 text-xs uppercase tracking-wider">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {suratList.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-12 text-gray-400">
-                  <div className="text-4xl mb-2">📜</div>
-                  <p>Belum ada surat</p>
-                </td></tr>
-              ) : suratList.map((s) => (
-                <tr key={s.id_surat} className="hover:bg-indigo-50/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-indigo-600">{s.id_surat}</td>
-                  <td className="px-4 py-3"><span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">{s.kategori}</span></td>
-                  <td className="px-4 py-3 max-w-[200px] truncate text-gray-700">{s.perihal}</td>
-                  <td className="px-4 py-3"><span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${statusBadge(s.status)}`}>{s.status}</span></td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{new Date(s.tanggal_kirim).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                  <td className="px-4 py-3 text-center">
-                    <button onClick={() => { setSelectedSurat(s); setShowDetail(true); }} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Detail">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* ✅ TAB NAVIGATION */}
+      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-2">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => { setActiveTab('masuk'); setFilterStatus(''); }}
+            className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'masuk'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <span className="text-lg">📨</span>
+            <span>Surat Masuk ({statsMasuk.total})</span>
+          </button>
+          <button
+            onClick={() => { setActiveTab('keluar'); setFilterStatus(''); }}
+            className={`py-3 px-4 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+              activeTab === 'keluar'
+                ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg shadow-purple-500/30'
+                : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+            }`}
+          >
+            <span className="text-lg">📬</span>
+            <span>Surat Balasan ({statsKeluar.total})</span>
+          </button>
         </div>
       </div>
 
-      {/* Mobile Cards */}
-      <div className="sm:hidden space-y-3">
-        {suratList.length === 0 ? (
-          <div className="bg-white rounded-xl p-8 text-center border border-gray-100">
-            <div className="text-4xl mb-2">📜</div>
-            <p className="text-gray-400">Belum ada surat</p>
-          </div>
-        ) : suratList.map((s) => (
-          <div key={s.id_surat} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 space-y-3">
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <p className="font-mono text-xs text-indigo-600">{s.id_surat}</p>
-                <p className="text-sm text-gray-700 truncate mt-0.5">{s.perihal}</p>
+      {/* ================================================================
+          TAB: SURAT MASUK
+      ================================================================ */}
+      {activeTab === 'masuk' && (
+        <>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <button
+              onClick={() => setFilterStatus('')}
+              className={`rounded-2xl p-4 border text-left transition-all card-hover ${
+                filterStatus === ''
+                  ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300 shadow-lg shadow-purple-500/20'
+                  : 'bg-white border-gray-100 shadow-sm hover:border-purple-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">📋</span>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</p>
+                  <p className="text-2xl font-bold text-gray-800">{statsMasuk.total}</p>
+                </div>
               </div>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ml-2 ${statusBadge(s.status)}`}>{s.status}</span>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">{s.kategori}</span>
-              <span className="text-xs text-gray-400">{new Date(s.tanggal_kirim).toLocaleDateString('id-ID')}</span>
-            </div>
-            <button onClick={() => { setSelectedSurat(s); setShowDetail(true); }} className="w-full py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100">
-              👁️ Lihat Detail
+            </button>
+            <button
+              onClick={() => setFilterStatus('terkirim')}
+              className={`rounded-2xl p-4 border text-left transition-all card-hover ${
+                filterStatus === 'terkirim'
+                  ? 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-300 shadow-lg'
+                  : 'bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">📤</span>
+                <div>
+                  <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Terkirim</p>
+                  <p className="text-2xl font-bold text-blue-700">{statsMasuk.terkirim}</p>
+                </div>
+              </div>
+            </button>
+            <button
+              onClick={() => setFilterStatus('diverifikasi')}
+              className={`rounded-2xl p-4 border text-left transition-all card-hover ${
+                filterStatus === 'diverifikasi'
+                  ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-300 shadow-lg'
+                  : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">✅</span>
+                <div>
+                  <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">Diverifikasi</p>
+                  <p className="text-2xl font-bold text-green-700">{statsMasuk.diverifikasi}</p>
+                </div>
+              </div>
+            </button>
+            <button
+              onClick={() => setFilterStatus('ditolak')}
+              className={`rounded-2xl p-4 border text-left transition-all card-hover ${
+                filterStatus === 'ditolak'
+                  ? 'bg-gradient-to-br from-red-50 to-red-100 border-red-300 shadow-lg'
+                  : 'bg-gradient-to-br from-red-50 to-red-100 border-red-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">❌</span>
+                <div>
+                  <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">Ditolak</p>
+                  <p className="text-2xl font-bold text-red-700">{statsMasuk.ditolak}</p>
+                </div>
+              </div>
             </button>
           </div>
-        ))}
-      </div>
 
-      {/* Detail Modal */}
-      {showDetail && selectedSurat && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowDetail(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="font-bold text-gray-800">Detail Surat</h3>
-              <button onClick={() => setShowDetail(false)} className="p-2 hover:bg-gray-100 rounded-lg">✕</button>
+          {/* Filter Info */}
+          {filterStatus && (
+            <div className="flex items-center gap-2 animate-in">
+              <span className="text-sm text-gray-500">Filter aktif:</span>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusBadgeMasuk(filterStatus)}`}>
+                <span>{statusIconMasuk(filterStatus)}</span>
+                {filterStatus}
+                <button onClick={() => setFilterStatus('')} className="ml-1 hover:text-red-600">×</button>
+              </span>
             </div>
-            <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)] space-y-3">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><p className="text-xs text-gray-500">ID Surat</p><p className="font-mono">{selectedSurat.id_surat}</p></div>
-                <div><p className="text-xs text-gray-500">Status</p><span className={`px-2 py-1 rounded-full text-xs font-medium ${statusBadge(selectedSurat.status)}`}>{selectedSurat.status}</span></div>
-                <div><p className="text-xs text-gray-500">Kategori</p><p>{selectedSurat.kategori}</p></div>
-                <div><p className="text-xs text-gray-500">Metode</p><p>{selectedSurat.metode === 'scan' ? '📷 Scan' : '📤 Upload'}</p></div>
-                <div className="col-span-2"><p className="text-xs text-gray-500">Perihal</p><p>{selectedSurat.perihal}</p></div>
-                {selectedSurat.catatan && <div className="col-span-2"><p className="text-xs text-gray-500">Catatan</p><p>{selectedSurat.catatan}</p></div>}
-                <div><p className="text-xs text-gray-500">Tanggal Kirim</p><p>{new Date(selectedSurat.tanggal_kirim).toLocaleString('id-ID')}</p></div>
-                {selectedSurat.tanggal_verifikasi && <div><p className="text-xs text-gray-500">Tgl Verifikasi</p><p>{new Date(selectedSurat.tanggal_verifikasi).toLocaleString('id-ID')}</p></div>}
-                {selectedSurat.diverifikasi_oleh && <div><p className="text-xs text-gray-500">Oleh</p><p>{selectedSurat.diverifikasi_oleh}</p></div>}
-                {selectedSurat.alasan_tolak && <div className="col-span-2"><p className="text-xs text-gray-500">Alasan Tolak</p><p className="text-red-600">{selectedSurat.alasan_tolak}</p></div>}
-              </div>
-              {selectedSurat.file_url && (
-                <a href={selectedSurat.file_url} download={selectedSurat.file_name} className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm hover:bg-indigo-100">
-                  📄 Download File
-                </a>
-              )}
+          )}
+
+          {/* Desktop Table Surat Masuk */}
+          <div className="hidden sm:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden card-hover">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gradient-to-r from-purple-50 to-pink-50">
+                  <tr>
+                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">ID Surat</th>
+                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Kategori</th>
+                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Perihal</th>
+                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Tanggal</th>
+                    <th className="text-center px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredSuratMasuk.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-16">
+                        <div className="text-6xl mb-3">📜</div>
+                        <p className="text-gray-400 font-medium">Belum ada surat masuk</p>
+                        <p className="text-gray-300 text-xs mt-1">Kirim surat pertama Anda dari menu Kirim Surat</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSuratMasuk.map((s) => (
+                      <tr key={s.id_surat} className="hover:bg-purple-50/30 transition-colors">
+                        <td className="px-5 py-4 font-mono text-xs text-purple-600 font-semibold">{s.id_surat}</td>
+                        <td className="px-5 py-4">
+                          <span className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium">{s.kategori}</span>
+                        </td>
+                        <td className="px-5 py-4 max-w-[200px] truncate text-gray-700">{s.perihal}</td>
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusBadgeMasuk(s.status)}`}>
+                            <span>{statusIconMasuk(s.status)}</span>
+                            {s.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-gray-500 text-xs whitespace-nowrap">
+                          {new Date(s.tanggal_kirim).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          <button
+                            onClick={() => { setSelectedSuratMasuk(s); setShowDetail(true); }}
+                            className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                            title="Detail"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
+
+          {/* Mobile Cards Surat Masuk */}
+          <div className="sm:hidden space-y-3">
+            {filteredSuratMasuk.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
+                <div className="text-5xl mb-3">📜</div>
+                <p className="text-gray-400 font-medium">Belum ada surat masuk</p>
+              </div>
+            ) : (
+              filteredSuratMasuk.map((s) => (
+                <div key={s.id_surat} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 space-y-3 card-hover">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-mono text-xs text-purple-600 font-semibold">{s.id_surat}</p>
+                      <p className="text-sm text-gray-700 truncate mt-1">{s.perihal}</p>
+                    </div>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ml-2 ${statusBadgeMasuk(s.status)}`}>
+                      <span>{statusIconMasuk(s.status)}</span>
+                      {s.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">{s.kategori}</span>
+                    <span className="text-xs text-gray-400">{new Date(s.tanggal_kirim).toLocaleDateString('id-ID')}</span>
+                  </div>
+                  <button
+                    onClick={() => { setSelectedSuratMasuk(s); setShowDetail(true); }}
+                    className="w-full py-2.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-semibold hover:bg-blue-100 transition-colors"
+                  >
+                    👁️ Lihat Detail
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+        </>
       )}
+
+      {/* ================================================================
+          TAB: SURAT BALASAN (SURAT KELUAR)
+      ================================================================ */}
+      {activeTab === 'keluar' && (
+        <>
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <button
+              onClick={() => setFilterStatus('')}
+              className={`rounded-2xl p-4 border text-left transition-all card-hover ${
+                filterStatus === ''
+                  ? 'bg-gradient-to-br from-purple-50 to-pink-50 border-purple-300 shadow-lg shadow-purple-500/20'
+                  : 'bg-white border-gray-100 shadow-sm hover:border-purple-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">📬</span>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Balasan</p>
+                  <p className="text-2xl font-bold text-gray-800">{statsKeluar.total}</p>
+                </div>
+              </div>
+            </button>
+            <button
+              onClick={() => setFilterStatus('terkirim')}
+              className={`rounded-2xl p-4 border text-left transition-all card-hover ${
+                filterStatus === 'terkirim'
+                  ? 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-300 shadow-lg'
+                  : 'bg-gradient-to-br from-indigo-50 to-indigo-100 border-indigo-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">📤</span>
+                <div>
+                  <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Terkirim</p>
+                  <p className="text-2xl font-bold text-indigo-700">{statsKeluar.terkirim}</p>
+                </div>
+              </div>
+            </button>
+            <button
+              onClick={() => setFilterStatus('selesai')}
+              className={`rounded-2xl p-4 border text-left transition-all card-hover ${
+                filterStatus === 'selesai'
+                  ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-300 shadow-lg'
+                  : 'bg-gradient-to-br from-green-50 to-green-100 border-green-200'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">✅</span>
+                <div>
+                  <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">Selesai</p>
+                  <p className="text-2xl font-bold text-green-700">{statsKeluar.selesai}</p>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          {/* Filter Info */}
+          {filterStatus && (
+            <div className="flex items-center gap-2 animate-in">
+              <span className="text-sm text-gray-500">Filter aktif:</span>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusBadgeKeluar(filterStatus)}`}>
+                <span>{statusIconKeluar(filterStatus)}</span>
+                {filterStatus}
+                <button onClick={() => setFilterStatus('')} className="ml-1 hover:text-red-600">×</button>
+              </span>
+            </div>
+          )}
+
+          {/* Desktop Table Surat Keluar */}
+          <div className="hidden sm:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden card-hover">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gradient-to-r from-purple-50 to-pink-50">
+                  <tr>
+                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">ID Surat</th>
+                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Nomor Surat</th>
+                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Perihal</th>
+                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Tanggal</th>
+                    <th className="text-center px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {filteredSuratKeluar.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="text-center py-16">
+                        <div className="text-6xl mb-3">📬</div>
+                        <p className="text-gray-400 font-medium">Belum ada surat balasan</p>
+                        <p className="text-gray-300 text-xs mt-1">Surat balasan dari Kemantren akan muncul di sini</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredSuratKeluar.map((s) => (
+                      <tr key={s.id_surat_keluar} className="hover:bg-purple-50/30 transition-colors">
+                        <td className="px-5 py-4 font-mono text-xs text-indigo-600 font-semibold">{s.id_surat_keluar}</td>
+                        <td className="px-5 py-4 font-mono text-xs text-gray-600">{s.nomor_surat}</td>
+                        <td className="px-5 py-4 max-w-[200px] truncate text-gray-700">{s.perihal}</td>
+                        <td className="px-5 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusBadgeKeluar(s.status)}`}>
+                            <span>{statusIconKeluar(s.status)}</span>
+                            {s.status}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-gray-500 text-xs whitespace-nowrap">
+                          {new Date(s.tanggal_kirim).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="px-5 py-4 text-center">
+                          <div className="flex gap-1.5 justify-center">
+                            <button
+                              onClick={() => { setSelectedSuratKeluar(s); setShowDetail(true); }}
+                              className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+                              title="Detail"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                            {s.file_url && (
+                              <button
+                                onClick={() => handleDownload(s.file_url, s.file_name)}
+                                className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
+                                title="Download"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-6-6m6 6l6-6m2 5a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Cards Surat Keluar */}
+          <div className="sm:hidden space-y-3">
+            {filteredSuratKeluar.length === 0 ? (
+              <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
+                <div className="text-5xl mb-3">📬</div>
+                <p className="text-gray-400 font-medium">Belum ada surat balasan</p>
+              </div>
+            ) : (
+              filteredSuratKeluar.map((s) => (
+                <div key={s.id_surat_keluar} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 space-y-3 card-hover">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-mono text-xs text-indigo-600 font-semibold">{s.id_surat_keluar}</p>
+                      <p className="font-mono text-xs text-gray-400 mt-0.5">{s.nomor_surat}</p>
+                      <p className="text-sm text-gray-700 truncate mt-1">{s.perihal}</p>
+                    </div>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ml-2 ${statusBadgeKeluar(s.status)}`}>
+                      <span>{statusIconKeluar(s.status)}</span>
+                      {s.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400">{new Date(s.tanggal_kirim).toLocaleDateString('id-ID')}</p>
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => { setSelectedSuratKeluar(s); setShowDetail(true); }}
+                      className="flex-1 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-semibold hover:bg-blue-100 transition-colors"
+                    >
+                      👁️ Detail
+                    </button>
+                    {s.file_url && (
+                      <button
+                        onClick={() => handleDownload(s.file_url, s.file_name)}
+                        className="flex-1 py-2.5 bg-green-50 text-green-600 rounded-xl text-xs font-semibold hover:bg-green-100 transition-colors"
+                      >
+                        📄 Download
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ================================================================
+          MODAL: DETAIL SURAT MASUK
+      ================================================================ */}
+      <Modal
+        isOpen={showDetail && !!selectedSuratMasuk}
+        onClose={() => { setShowDetail(false); setSelectedSuratMasuk(null); }}
+        title="Detail Surat Masuk"
+        size="lg"
+      >
+        {selectedSuratMasuk && (
+          <div className="space-y-4">
+            <div className={`rounded-2xl p-5 ${statusBadgeMasuk(selectedSuratMasuk.status)}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider opacity-70">Status Surat</p>
+                  <p className="text-2xl font-bold mt-1 flex items-center gap-2">
+                    <span>{statusIconMasuk(selectedSuratMasuk.status)}</span>
+                    {selectedSuratMasuk.status}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-semibold uppercase tracking-wider opacity-70">ID Surat</p>
+                  <p className="font-mono text-sm font-bold mt-1">{selectedSuratMasuk.id_surat}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Kategori</p>
+                  <p className="text-sm font-semibold mt-1">{selectedSuratMasuk.kategori}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Metode</p>
+                  <p className="text-sm font-semibold mt-1">
+                    {selectedSuratMasuk.metode === 'scan' ? '📷 Scan' : '📤 Upload'}
+                  </p>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Perihal</p>
+                  <p className="text-sm font-semibold mt-1">{selectedSuratMasuk.perihal}</p>
+                </div>
+                {selectedSuratMasuk.catatan && (
+                  <div className="sm:col-span-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Catatan</p>
+                    <p className="text-sm mt-1">{selectedSuratMasuk.catatan}</p>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal Kirim</p>
+                  <p className="text-sm mt-1">{new Date(selectedSuratMasuk.tanggal_kirim).toLocaleString('id-ID')}</p>
+                </div>
+                {selectedSuratMasuk.tanggal_verifikasi && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal Verifikasi</p>
+                    <p className="text-sm mt-1">{new Date(selectedSuratMasuk.tanggal_verifikasi).toLocaleString('id-ID')}</p>
+                  </div>
+                )}
+                {selectedSuratMasuk.diverifikasi_oleh && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Diverifikasi Oleh</p>
+                    <p className="text-sm mt-1">{selectedSuratMasuk.diverifikasi_oleh}</p>
+                  </div>
+                )}
+                {selectedSuratMasuk.alasan_tolak && (
+                  <div className="sm:col-span-2">
+                    <p className="text-xs font-semibold text-red-500 uppercase tracking-wider">Alasan Tolak</p>
+                    <p className="text-sm text-red-600 bg-red-50 p-3 rounded-xl mt-1">{selectedSuratMasuk.alasan_tolak}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {selectedSuratMasuk.file_url && (
+              <button
+                onClick={() => handleDownload(selectedSuratMasuk.file_url, selectedSuratMasuk.file_name)}
+                className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-purple-500/30"
+              >
+                📄 Download File ({selectedSuratMasuk.file_name})
+              </button>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* ================================================================
+          MODAL: DETAIL SURAT KELUAR (BALASAN)
+      ================================================================ */}
+      <Modal
+        isOpen={showDetail && !!selectedSuratKeluar}
+        onClose={() => { setShowDetail(false); setSelectedSuratKeluar(null); }}
+        title="Detail Surat Balasan"
+        size="lg"
+      >
+        {selectedSuratKeluar && (
+          <div className="space-y-4">
+            <div className={`rounded-2xl p-5 ${statusBadgeKeluar(selectedSuratKeluar.status)}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider opacity-70">Status Surat</p>
+                  <p className="text-2xl font-bold mt-1 flex items-center gap-2">
+                    <span>{statusIconKeluar(selectedSuratKeluar.status)}</span>
+                    {selectedSuratKeluar.status}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-semibold uppercase tracking-wider opacity-70">ID Surat</p>
+                  <p className="font-mono text-sm font-bold mt-1">{selectedSuratKeluar.id_surat_keluar}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Nomor Surat</p>
+                  <p className="font-mono text-sm font-semibold mt-1">{selectedSuratKeluar.nomor_surat}</p>
+                </div>
+                <div className="sm:col-span-2">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Perihal</p>
+                  <p className="text-sm font-semibold mt-1">{selectedSuratKeluar.perihal}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Penerima</p>
+                  <p className="text-sm font-semibold mt-1">{selectedSuratKeluar.nama_penerima}</p>
+                  <p className="text-xs text-gray-500 font-mono">NIK: {selectedSuratKeluar.nik_penerima}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal Kirim</p>
+                  <p className="text-sm mt-1">{new Date(selectedSuratKeluar.tanggal_kirim).toLocaleString('id-ID')}</p>
+                </div>
+              </div>
+            </div>
+
+            {selectedSuratKeluar.file_url && (
+              <button
+                onClick={() => handleDownload(selectedSuratKeluar.file_url, selectedSuratKeluar.file_name)}
+                className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-indigo-500/30"
+              >
+                📄 Download File Surat Balasan
+              </button>
+            )}
+
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
+              <p className="text-xs text-blue-700">
+                ℹ️ Surat ini adalah balasan resmi dari Kemantren Tegalrejo untuk surat yang Anda kirim.
+              </p>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

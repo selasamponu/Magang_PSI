@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { SuratMasukDB, KategoriDB, LogDB } from '../store/db';
-import { Warga } from '../types';
+import { Warga, Kategori } from '../types';
 
 interface Props {
   warga: Warga;
@@ -17,9 +17,21 @@ export default function KirimSurat({ warga, onNavigate }: Props) {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [kategoriList, setKategoriList] = useState<Kategori[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const kategoriList = KategoriDB.getAll();
+
+  useEffect(() => {
+    const loadKategori = async () => {
+      try {
+        const data = await KategoriDB.getAll();
+        setKategoriList(data);
+      } catch (err) {
+        console.error('Error loading kategori:', err);
+      }
+    };
+    loadKategori();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -34,7 +46,7 @@ export default function KirimSurat({ warga, onNavigate }: Props) {
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -44,9 +56,9 @@ export default function KirimSurat({ warga, onNavigate }: Props) {
     if (!perihal.trim()) { setError('Perihal harus diisi!'); return; }
 
     setLoading(true);
-    setTimeout(() => {
+    try {
       const id = SuratMasukDB.generateId();
-      SuratMasukDB.create({
+      await SuratMasukDB.create({
         id_surat: id,
         nik_pengirim: warga.nik,
         nama_pengirim: warga.nama_lengkap,
@@ -62,22 +74,32 @@ export default function KirimSurat({ warga, onNavigate }: Props) {
         diverifikasi_oleh: null,
         alasan_tolak: null,
       });
-      LogDB.create({ user_id: warga.nik, nama_user: warga.nama_lengkap, user_type: 'warga', aktivitas: 'KIRIM_SURAT', detail: `Kirim surat ${id} - ${perihal}` });
+      await LogDB.create({
+        user_id: warga.nik,
+        nama_user: warga.nama_lengkap,
+        user_type: 'warga',
+        aktivitas: 'KIRIM_SURAT',
+        detail: `Kirim surat ${id} - ${perihal}`,
+      });
       setSuccess(`Surat berhasil dikirim! ID: ${id}`);
       setFileData('');
       setFileName('');
       setPerihal('');
       setCatatan('');
       setKategori('');
+    } catch (err: any) {
+      setError(err.message || 'Gagal mengirim surat');
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+    <div className="max-w-3xl mx-auto space-y-6">
+      {/* Header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">📝 Kirim Surat</h1>
-        <p className="text-sm text-gray-500">Kirim surat ke Kemantren Tegalrejo</p>
+        <h1 className="text-2xl sm:text-3xl font-bold gradient-text">📝 Kirim Surat</h1>
+        <p className="text-sm text-gray-500 mt-1">Kirim surat ke Kemantren Tegalrejo</p>
       </div>
 
       {/* Metode Selection */}
@@ -85,77 +107,166 @@ export default function KirimSurat({ warga, onNavigate }: Props) {
         <button
           type="button"
           onClick={() => setMetode('scan')}
-          className={`p-4 rounded-xl border-2 text-center transition-all ${metode === 'scan' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'}`}
+          className={`p-6 rounded-2xl border-2 text-center transition-all duration-300 hover-scale ${
+            metode === 'scan' 
+              ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg shadow-purple-500/20' 
+              : 'border-gray-200 hover:border-purple-300 bg-white'
+          }`}
         >
-          <div className="text-3xl mb-2">📷</div>
-          <p className="font-medium text-sm">Scan Surat Fisik</p>
-          <p className="text-xs text-gray-500">Foto surat kertas</p>
+          <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center text-3xl mb-3 transition-all ${
+            metode === 'scan' ? 'bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/30' : 'bg-gray-100'
+          }`}>
+            📷
+          </div>
+          <p className={`font-semibold ${metode === 'scan' ? 'text-purple-700' : 'text-gray-700'}`}>Scan Surat Fisik</p>
+          <p className="text-xs text-gray-500 mt-1">Foto surat kertas</p>
         </button>
         <button
           type="button"
           onClick={() => setMetode('upload')}
-          className={`p-4 rounded-xl border-2 text-center transition-all ${metode === 'upload' ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:border-gray-300'}`}
+          className={`p-6 rounded-2xl border-2 text-center transition-all duration-300 hover-scale ${
+            metode === 'upload' 
+              ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg shadow-purple-500/20' 
+              : 'border-gray-200 hover:border-purple-300 bg-white'
+          }`}
         >
-          <div className="text-3xl mb-2">📤</div>
-          <p className="font-medium text-sm">Upload File</p>
-          <p className="text-xs text-gray-500">PDF/DOC/JPG/PNG</p>
+          <div className={`w-16 h-16 mx-auto rounded-2xl flex items-center justify-center text-3xl mb-3 transition-all ${
+            metode === 'upload' ? 'bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/30' : 'bg-gray-100'
+          }`}>
+            📤
+          </div>
+          <p className={`font-semibold ${metode === 'upload' ? 'text-purple-700' : 'text-gray-700'}`}>Upload File</p>
+          <p className="text-xs text-gray-500 mt-1">PDF/DOC/JPG/PNG</p>
         </button>
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-5">
+        {/* Upload File */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Upload File (max 5MB)</label>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Upload File <span className="text-gray-400 font-normal">(max 5MB)</span>
+          </label>
           {metode === 'scan' ? (
             <div>
               <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
-              <button type="button" onClick={() => cameraInputRef.current?.click()} className="w-full py-8 border-2 border-dashed border-gray-300 rounded-xl text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition-all">
-                <div className="text-4xl mb-2">📷</div>
-                <p className="text-sm text-gray-600">{fileName || 'Klik untuk mengambil foto'}</p>
+              <button 
+                type="button" 
+                onClick={() => cameraInputRef.current?.click()} 
+                className="w-full py-10 border-2 border-dashed border-gray-300 rounded-2xl text-center hover:border-purple-400 hover:bg-purple-50/50 transition-all group"
+              >
+                <div className="text-5xl mb-3 group-hover:scale-110 transition-transform">📷</div>
+                <p className="text-sm font-semibold text-gray-700">{fileName || 'Klik untuk mengambil foto'}</p>
+                <p className="text-xs text-gray-400 mt-1">Ambil foto surat fisik</p>
               </button>
             </div>
           ) : (
             <div>
               <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" onChange={handleFileChange} className="hidden" />
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full py-8 border-2 border-dashed border-gray-300 rounded-xl text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition-all">
-                <div className="text-4xl mb-2">📁</div>
-                <p className="text-sm text-gray-600">{fileName || 'Klik untuk memilih file'}</p>
+              <button 
+                type="button" 
+                onClick={() => fileInputRef.current?.click()} 
+                className="w-full py-10 border-2 border-dashed border-gray-300 rounded-2xl text-center hover:border-purple-400 hover:bg-purple-50/50 transition-all group"
+              >
+                <div className="text-5xl mb-3 group-hover:scale-110 transition-transform">📁</div>
+                <p className="text-sm font-semibold text-gray-700">{fileName || 'Klik untuk memilih file'}</p>
                 <p className="text-xs text-gray-400 mt-1">PDF, JPG, PNG, DOC, DOCX</p>
               </button>
             </div>
           )}
         </div>
 
+        {/* Kategori */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-          <select value={kategori} onChange={e => setKategori(e.target.value)} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" required>
-            <option value="">Pilih Kategori</option>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Kategori Surat</label>
+          <select 
+            value={kategori} 
+            onChange={e => setKategori(e.target.value)} 
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all bg-white" 
+            required
+          >
+            <option value="">-- Pilih Kategori --</option>
             {kategoriList.map(k => <option key={k.id_kategori} value={k.nama_kategori}>{k.nama_kategori}</option>)}
           </select>
         </div>
 
+        {/* Perihal */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Perihal</label>
-          <input type="text" value={perihal} onChange={e => setPerihal(e.target.value)} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Masukkan perihal surat" required />
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Perihal Surat</label>
+          <input 
+            type="text" 
+            value={perihal} 
+            onChange={e => setPerihal(e.target.value)} 
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all" 
+            placeholder="Contoh: Undangan Rapat RT" 
+            required 
+          />
         </div>
 
+        {/* Catatan */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Catatan (opsional)</label>
-          <textarea value={catatan} onChange={e => setCatatan(e.target.value)} rows={3} className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" placeholder="Catatan tambahan..." />
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            Catatan <span className="text-gray-400 font-normal">(opsional)</span>
+          </label>
+          <textarea 
+            value={catatan} 
+            onChange={e => setCatatan(e.target.value)} 
+            rows={3} 
+            className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all resize-none" 
+            placeholder="Tambahkan catatan..." 
+          />
         </div>
 
-        {error && <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">{error}</div>}
+        {/* Error / Success */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-red-600 text-sm flex items-center gap-2 animate-in">
+            <span>⚠️</span> {error}
+          </div>
+        )}
         {success && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-green-600 text-sm">
-            {success}
-            <button onClick={() => onNavigate('riwayat-surat')} className="ml-2 underline font-medium">Lihat Riwayat</button>
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-green-700 text-sm animate-in">
+            <div className="flex items-center gap-2 mb-2">
+              <span>✅</span> <strong>{success}</strong>
+            </div>
+            <button 
+              onClick={() => onNavigate('riwayat-surat')} 
+              className="text-green-700 underline font-semibold hover:text-green-800"
+            >
+              → Lihat Riwayat Surat
+            </button>
           </div>
         )}
 
-        <button type="submit" disabled={loading} className="w-full py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold rounded-xl hover:opacity-90 transition-all disabled:opacity-50">
-          {loading ? 'Mengirim...' : 'Kirim Surat'}
+        {/* Submit */}
+        <button 
+          type="submit" 
+          disabled={loading} 
+          className="w-full py-4 bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 bg-[length:200%_100%] text-white font-bold rounded-2xl hover:bg-[position:100%_0] transition-all duration-500 disabled:opacity-50 shadow-lg shadow-purple-500/40 hover:shadow-purple-500/60 btn-ripple"
+        >
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Mengirim...
+            </span>
+          ) : '📤 Kirim Surat'}
         </button>
       </form>
+
+      {/* Info Card */}
+      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5 border border-purple-100">
+        <h3 className="font-bold text-purple-800 mb-3 flex items-center gap-2">
+          <span>💡</span> Tips
+        </h3>
+        <ul className="text-sm text-purple-700 space-y-1.5">
+          <li>• Pastikan file surat jelas dan mudah dibaca</li>
+          <li>• Ukuran file maksimal 5MB</li>
+          <li>• Format: PDF, JPG, PNG, DOC, DOCX</li>
+          <li>• Surat akan diverifikasi oleh petugas Kemantren</li>
+        </ul>
+      </div>
     </div>
   );
 }

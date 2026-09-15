@@ -260,7 +260,7 @@ Untuk pertanyaan atau bantuan:
 
 ## 📄 Lisensi
 
-© 2024 Kemantren Tegalrejo. All rights reserved.
+© 2026 Kemantren Tegalrejo. All rights reserved.
 
 ---
 

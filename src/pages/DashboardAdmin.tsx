@@ -2,17 +2,48 @@ import { useState, useEffect } from 'react';
 import { getDashboardStats, SuratMasukDB } from '../store/db';
 import { SuratMasuk } from '../types';
 
-export default function DashboardAdmin() {
-  const [stats, setStats] = useState(getDashboardStats('user'));
-  const [recentSurat, setRecentSurat] = useState<SuratMasuk[]>([]);
+// Tipe default stats biar aman saat loading
+const defaultStats = {
+  totalSuratMasuk: 0,
+  menungguVerifikasi: 0,
+  diverifikasi: 0,
+  ditolak: 0,
+  totalWarga: 0,
+  totalUser: 0,
+};
 
-  const refresh = () => {
-    setStats(getDashboardStats('user'));
-    const all = SuratMasukDB.getAll();
-    setRecentSurat(all.sort((a, b) => new Date(b.tanggal_kirim).getTime() - new Date(a.tanggal_kirim).getTime()).slice(0, 8));
+export default function DashboardAdmin() {
+  const [stats, setStats] = useState<any>(defaultStats);
+  const [recentSurat, setRecentSurat] = useState<SuratMasuk[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // ✅ FIX: refresh jadi async
+  const refresh = async () => {
+    try {
+      setLoading(true);
+      
+      // ✅ FIX: pakai await untuk stats
+      const statsData = await getDashboardStats('user');
+      setStats(statsData);
+      
+      // ✅ FIX: pakai await untuk surat
+      const all = await SuratMasukDB.getAll();
+      const sorted = all
+        .sort((a: SuratMasuk, b: SuratMasuk) => 
+          new Date(b.tanggal_kirim).getTime() - new Date(a.tanggal_kirim).getTime()
+        )
+        .slice(0, 8);
+      setRecentSurat(sorted);
+    } catch (err) {
+      console.error('Error loading dashboard:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => { 
+    refresh(); 
+  }, []);
 
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
@@ -40,13 +71,19 @@ export default function DashboardAdmin() {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Dashboard Admin</h1>
           <p className="text-sm text-gray-500">Selamat datang di Aplikasi Surat Kemantren Tegalrejo</p>
         </div>
-        <button onClick={refresh} className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-sm">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-          Refresh
+        <button 
+          onClick={refresh} 
+          disabled={loading}
+          className="w-full sm:w-auto px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {loading ? 'Loading...' : 'Refresh'}
         </button>
       </div>
 
-      {/* KPI Cards - Responsive Grid */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         {cards.map((card, i) => (
           <div key={i} className={`${card.bg} rounded-xl p-3 sm:p-4 border border-gray-100/50 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5`}>
@@ -61,7 +98,7 @@ export default function DashboardAdmin() {
         ))}
       </div>
 
-      {/* Recent Surat - Desktop Table */}
+      {/* Recent Surat */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="p-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-bold text-gray-800 flex items-center gap-2">

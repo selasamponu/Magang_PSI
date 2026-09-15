@@ -12,9 +12,11 @@ import SuratMasukPage from './pages/SuratMasuk';
 import SuratKeluarPage from './pages/SuratKeluar';
 import KelolaWarga from './pages/KelolaWarga';
 import KelolaUser from './pages/KelolaUser';
+import LaporanPage from './pages/Laporan';
 import LogAktivitasPage from './pages/LogAktivitas';
 import KirimSurat from './pages/KirimSurat';
 import RiwayatSurat from './pages/RiwayatSurat';
+import VerifikasiSurat from './pages/VerifikasiSurat';
 
 // Initialize database
 initDB();
@@ -23,6 +25,16 @@ export default function App() {
   const [auth, setAuthState] = useState<AuthState>(getAuth());
   const [page, setPage] = useState('login');
   const [currentPage, setCurrentPage] = useState('dashboard');
+  const [verifikasiId, setVerifikasiId] = useState<string | null>(null);
+
+  // Cek URL /verifikasi/:id saat pertama kali load
+  useEffect(() => {
+    const path = window.location.pathname;
+    const match = path.match(/^\/verifikasi\/(.+)$/);
+    if (match) {
+      setVerifikasiId(match[1]);
+    }
+  }, []);
 
   useEffect(() => {
     if (auth.isLoggedIn) {
@@ -47,7 +59,20 @@ export default function App() {
     setCurrentPage(p);
   };
 
-  // Render based on page state
+  // Render halaman verifikasi TANPA login
+  if (verifikasiId) {
+    return (
+      <VerifikasiSurat
+        idSurat={verifikasiId}
+        onBack={() => {
+          setVerifikasiId(null);
+          window.history.pushState({}, '', '/');
+        }}
+      />
+    );
+  }
+
+  // Render login/register
   if (page === 'login') {
     return <Login onLoginSuccess={handleLoginSuccess} onGoRegister={() => setPage('register')} />;
   }
@@ -66,20 +91,37 @@ export default function App() {
   const renderPage = () => {
     if (isAdmin) {
       switch (currentPage) {
-        case 'dashboard': return <DashboardAdmin />;
-        case 'surat-masuk': return <SuratMasukPage currentUser={currentUser} />;
-        case 'surat-keluar': return <SuratKeluarPage currentUser={currentUser} />;
-        case 'kelola-warga': return <KelolaWarga currentUser={currentUser} />;
-        case 'kelola-user': return currentUser.role === 'admin' ? <KelolaUser currentUser={currentUser} /> : <DashboardAdmin />;
-        case 'log-aktivitas': return currentUser.role === 'admin' ? <LogAktivitasPage /> : <DashboardAdmin />;
-        default: return <DashboardAdmin />;
+        case 'dashboard':
+          return <DashboardAdmin />;
+        case 'surat-masuk':
+          return <SuratMasukPage currentUser={currentUser} />;
+        case 'surat-keluar':
+          return <SuratKeluarPage currentUser={currentUser} />;
+        case 'kelola-warga':
+          return <KelolaWarga currentUser={currentUser} />;
+        case 'laporan':
+          return <LaporanPage currentUser={currentUser} />;
+        case 'kelola-user':
+          return currentUser.role === 'admin' ? (
+            <KelolaUser currentUser={currentUser} />
+          ) : (
+            <DashboardAdmin />
+          );
+        case 'log-aktivitas':
+          return currentUser.role === 'admin' ? <LogAktivitasPage /> : <DashboardAdmin />;
+        default:
+          return <DashboardAdmin />;
       }
     } else {
       switch (currentPage) {
-        case 'dashboard': return <DashboardWarga warga={currentWarga} />;
-        case 'kirim-surat': return <KirimSurat warga={currentWarga} onNavigate={handleNavigate} />;
-        case 'riwayat-surat': return <RiwayatSurat warga={currentWarga} />;
-        default: return <DashboardWarga warga={currentWarga} />;
+        case 'dashboard':
+          return <DashboardWarga warga={currentWarga} />;
+        case 'kirim-surat':
+          return <KirimSurat warga={currentWarga} onNavigate={handleNavigate} />;
+        case 'riwayat-surat':
+          return <RiwayatSurat warga={currentWarga} />;
+        default:
+          return <DashboardWarga warga={currentWarga} />;
       }
     }
   };
