@@ -1,7 +1,6 @@
 // src/api/suratApi.ts
 const API_URL = `http://${window.location.hostname}:5000/api`;
 
-// Helper untuk fetch JSON
 async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const res = await fetch(`${API_URL}${endpoint}`, {
     headers: {
@@ -20,7 +19,6 @@ async function fetchApi(endpoint: string, options: RequestInit = {}) {
   return data;
 }
 
-// Helper untuk fetch FormData (upload file)
 async function fetchFormData(endpoint: string, formData: FormData, method = 'POST') {
   const res = await fetch(`${API_URL}${endpoint}`, {
     method,
@@ -116,6 +114,13 @@ export const suratKeluarApi = {
       formData.append('file', file);
     }
     return fetchFormData(`/surat-keluar/${id}`, formData, 'PUT');
+  },
+
+  updateStatus: async (id: string, status: string) => {
+    return fetchApi(`/surat-keluar/${id}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
   },
 
   delete: async (id: string) => {

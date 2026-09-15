@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { SuratMasukDB, SuratKeluarDB } from '../store/db';
+import { SuratMasukDB, SuratKeluarDB, LogDB } from '../store/db';
 import { Warga, SuratMasuk, SuratKeluar } from '../types';
 import Modal from '../components/Modal';
 
@@ -19,12 +19,10 @@ export default function RiwayatSurat({ warga }: Props) {
   const [loading, setLoading] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
 
-  // ✅ REFRESH: Ambil surat masuk + surat keluar milik warga ini
   const refresh = async () => {
     try {
       setLoading(true);
 
-      // Surat masuk dari warga
       const masukData = await SuratMasukDB.getByNik(warga.nik);
       setSuratMasukList(
         masukData.sort(
@@ -33,7 +31,6 @@ export default function RiwayatSurat({ warga }: Props) {
         )
       );
 
-      // Surat keluar yang ditujukan ke warga (balasan)
       const keluarData = await SuratKeluarDB.getAll();
       setSuratKeluarList(
         keluarData
@@ -54,9 +51,71 @@ export default function RiwayatSurat({ warga }: Props) {
     refresh();
   }, [filterStatus]);
 
-  // ================================================================
-  // BADGE & ICON
-  // ================================================================
+  // ✅ AUTO-UPDATE STATUS → 'selesai'
+  const autoMarkAsSelesai = async (surat: SuratKeluar) => {
+    if (surat.status === 'selesai') return;
+
+    try {
+      await SuratKeluarDB.updateStatus(surat.id_surat_keluar, 'selesai');
+
+      await LogDB.create({
+        user_id: warga.nik,
+        nama_user: warga.nama_lengkap,
+        user_type: 'warga',
+        aktivitas: 'BUKA_SURAT_BALASAN',
+        detail: `Buka surat balasan ${surat.id_surat_keluar} — status jadi selesai`,
+      });
+
+      setSuratKeluarList((prev) =>
+        prev.map((s) =>
+          s.id_surat_keluar === surat.id_surat_keluar
+            ? { ...s, status: 'selesai' as const }
+            : s
+        )
+      );
+
+      if (selectedSuratKeluar?.id_surat_keluar === surat.id_surat_keluar) {
+        setSelectedSuratKeluar({ ...selectedSuratKeluar, status: 'selesai' });
+      }
+    } catch (err) {
+      console.error('Gagal update status:', err);
+    }
+  };
+
+  // ✅ HANDLER: Buka detail → auto selesai
+  const handleOpenDetailKeluar = (surat: SuratKeluar) => {
+    setSelectedSuratKeluar(surat);
+    setShowDetail(true);
+    autoMarkAsSelesai(surat);
+  };
+
+  // ✅ HANDLER: Download → auto selesai
+  const handleDownload = (fileUrl: string, fileName: string, surat?: SuratKeluar) => {
+    if (!fileUrl) {
+      alert('File tidak tersedia!');
+      return;
+    }
+
+    let fullUrl = fileUrl;
+    if (fileUrl.startsWith('/uploads/')) {
+      fullUrl = `http://${window.location.hostname}:5000${fileUrl}`;
+    }
+
+    const a = document.createElement('a');
+    a.href = fullUrl;
+    a.download = fileName || 'surat';
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    // ✅ Auto-mark as selesai kalau ini surat keluar
+    if (surat) {
+      autoMarkAsSelesai(surat);
+    }
+  };
+
   const statusBadgeMasuk = (status: string) => {
     const map: Record<string, string> = {
       terkirim: 'bg-blue-100 text-blue-700 border border-blue-200',
@@ -95,9 +154,6 @@ export default function RiwayatSurat({ warga }: Props) {
     return map[status] || '📄';
   };
 
-  // ================================================================
-  // FILTER
-  // ================================================================
   const filteredSuratMasuk = filterStatus
     ? suratMasukList.filter((s) => s.status === filterStatus)
     : suratMasukList;
@@ -106,9 +162,6 @@ export default function RiwayatSurat({ warga }: Props) {
     ? suratKeluarList.filter((s) => s.status === filterStatus)
     : suratKeluarList;
 
-  // ================================================================
-  // STATS
-  // ================================================================
   const statsMasuk = {
     total: suratMasukList.length,
     terkirim: suratMasukList.filter((s) => s.status === 'terkirim').length,
@@ -120,31 +173,6 @@ export default function RiwayatSurat({ warga }: Props) {
     total: suratKeluarList.length,
     terkirim: suratKeluarList.filter((s) => s.status === 'terkirim').length,
     selesai: suratKeluarList.filter((s) => s.status === 'selesai').length,
-  };
-
-  // ================================================================
-  // DOWNLOAD HANDLER
-  // ================================================================
-  const handleDownload = (fileUrl: string, fileName: string) => {
-    if (!fileUrl) {
-      alert('File tidak tersedia!');
-      return;
-    }
-
-    // Handle URL relative /uploads/
-    let fullUrl = fileUrl;
-    if (fileUrl.startsWith('/uploads/')) {
-      fullUrl = `http://${window.location.hostname}:5000${fileUrl}`;
-    }
-
-    const a = document.createElement('a');
-    a.href = fullUrl;
-    a.download = fileName || 'surat';
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
   };
 
   return (
@@ -169,7 +197,7 @@ export default function RiwayatSurat({ warga }: Props) {
         </button>
       </div>
 
-      {/* ✅ TAB NAVIGATION */}
+      {/* Tab Navigation */}
       <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-2">
         <div className="grid grid-cols-2 gap-2">
           <button
@@ -197,12 +225,9 @@ export default function RiwayatSurat({ warga }: Props) {
         </div>
       </div>
 
-      {/* ================================================================
-          TAB: SURAT MASUK
-      ================================================================ */}
+      {/* TAB SURAT MASUK */}
       {activeTab === 'masuk' && (
         <>
-          {/* KPI Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <button
               onClick={() => setFilterStatus('')}
@@ -270,19 +295,6 @@ export default function RiwayatSurat({ warga }: Props) {
             </button>
           </div>
 
-          {/* Filter Info */}
-          {filterStatus && (
-            <div className="flex items-center gap-2 animate-in">
-              <span className="text-sm text-gray-500">Filter aktif:</span>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusBadgeMasuk(filterStatus)}`}>
-                <span>{statusIconMasuk(filterStatus)}</span>
-                {filterStatus}
-                <button onClick={() => setFilterStatus('')} className="ml-1 hover:text-red-600">×</button>
-              </span>
-            </div>
-          )}
-
-          {/* Desktop Table Surat Masuk */}
           <div className="hidden sm:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden card-hover">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -302,7 +314,6 @@ export default function RiwayatSurat({ warga }: Props) {
                       <td colSpan={6} className="text-center py-16">
                         <div className="text-6xl mb-3">📜</div>
                         <p className="text-gray-400 font-medium">Belum ada surat masuk</p>
-                        <p className="text-gray-300 text-xs mt-1">Kirim surat pertama Anda dari menu Kirim Surat</p>
                       </td>
                     </tr>
                   ) : (
@@ -326,7 +337,6 @@ export default function RiwayatSurat({ warga }: Props) {
                           <button
                             onClick={() => { setSelectedSuratMasuk(s); setShowDetail(true); }}
                             className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                            title="Detail"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -342,49 +352,29 @@ export default function RiwayatSurat({ warga }: Props) {
             </div>
           </div>
 
-          {/* Mobile Cards Surat Masuk */}
           <div className="sm:hidden space-y-3">
-            {filteredSuratMasuk.length === 0 ? (
-              <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
-                <div className="text-5xl mb-3">📜</div>
-                <p className="text-gray-400 font-medium">Belum ada surat masuk</p>
+            {filteredSuratMasuk.map((s) => (
+              <div key={s.id_surat} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 space-y-3">
+                <p className="font-mono text-xs text-purple-600 font-semibold">{s.id_surat}</p>
+                <p className="text-sm text-gray-700 truncate">{s.perihal}</p>
+                <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusBadgeMasuk(s.status)}`}>
+                  <span>{statusIconMasuk(s.status)}</span> {s.status}
+                </span>
+                <button
+                  onClick={() => { setSelectedSuratMasuk(s); setShowDetail(true); }}
+                  className="w-full py-2.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-semibold"
+                >
+                  👁️ Lihat Detail
+                </button>
               </div>
-            ) : (
-              filteredSuratMasuk.map((s) => (
-                <div key={s.id_surat} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 space-y-3 card-hover">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-mono text-xs text-purple-600 font-semibold">{s.id_surat}</p>
-                      <p className="text-sm text-gray-700 truncate mt-1">{s.perihal}</p>
-                    </div>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ml-2 ${statusBadgeMasuk(s.status)}`}>
-                      <span>{statusIconMasuk(s.status)}</span>
-                      {s.status}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">{s.kategori}</span>
-                    <span className="text-xs text-gray-400">{new Date(s.tanggal_kirim).toLocaleDateString('id-ID')}</span>
-                  </div>
-                  <button
-                    onClick={() => { setSelectedSuratMasuk(s); setShowDetail(true); }}
-                    className="w-full py-2.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-semibold hover:bg-blue-100 transition-colors"
-                  >
-                    👁️ Lihat Detail
-                  </button>
-                </div>
-              ))
-            )}
+            ))}
           </div>
         </>
       )}
 
-      {/* ================================================================
-          TAB: SURAT BALASAN (SURAT KELUAR)
-      ================================================================ */}
+      {/* TAB SURAT BALASAN */}
       {activeTab === 'keluar' && (
         <>
-          {/* KPI Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <button
               onClick={() => setFilterStatus('')}
@@ -397,7 +387,7 @@ export default function RiwayatSurat({ warga }: Props) {
               <div className="flex items-center gap-2">
                 <span className="text-2xl">📬</span>
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Balasan</p>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</p>
                   <p className="text-2xl font-bold text-gray-800">{statsKeluar.total}</p>
                 </div>
               </div>
@@ -413,7 +403,7 @@ export default function RiwayatSurat({ warga }: Props) {
               <div className="flex items-center gap-2">
                 <span className="text-2xl">📤</span>
                 <div>
-                  <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Terkirim</p>
+                  <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wider">Belum Dibaca</p>
                   <p className="text-2xl font-bold text-indigo-700">{statsKeluar.terkirim}</p>
                 </div>
               </div>
@@ -429,33 +419,20 @@ export default function RiwayatSurat({ warga }: Props) {
               <div className="flex items-center gap-2">
                 <span className="text-2xl">✅</span>
                 <div>
-                  <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">Selesai</p>
+                  <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">Sudah Dibaca</p>
                   <p className="text-2xl font-bold text-green-700">{statsKeluar.selesai}</p>
                 </div>
               </div>
             </button>
           </div>
 
-          {/* Filter Info */}
-          {filterStatus && (
-            <div className="flex items-center gap-2 animate-in">
-              <span className="text-sm text-gray-500">Filter aktif:</span>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${statusBadgeKeluar(filterStatus)}`}>
-                <span>{statusIconKeluar(filterStatus)}</span>
-                {filterStatus}
-                <button onClick={() => setFilterStatus('')} className="ml-1 hover:text-red-600">×</button>
-              </span>
-            </div>
-          )}
-
-          {/* Desktop Table Surat Keluar */}
           <div className="hidden sm:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden card-hover">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gradient-to-r from-purple-50 to-pink-50">
                   <tr>
                     <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">ID Surat</th>
-                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Nomor Surat</th>
+                    <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Nomor</th>
                     <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Perihal</th>
                     <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Status</th>
                     <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Tanggal</th>
@@ -468,7 +445,6 @@ export default function RiwayatSurat({ warga }: Props) {
                       <td colSpan={6} className="text-center py-16">
                         <div className="text-6xl mb-3">📬</div>
                         <p className="text-gray-400 font-medium">Belum ada surat balasan</p>
-                        <p className="text-gray-300 text-xs mt-1">Surat balasan dari Kemantren akan muncul di sini</p>
                       </td>
                     </tr>
                   ) : (
@@ -489,9 +465,9 @@ export default function RiwayatSurat({ warga }: Props) {
                         <td className="px-5 py-4 text-center">
                           <div className="flex gap-1.5 justify-center">
                             <button
-                              onClick={() => { setSelectedSuratKeluar(s); setShowDetail(true); }}
+                              onClick={() => handleOpenDetailKeluar(s)}
                               className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
-                              title="Detail"
+                              title="Buka Detail (auto selesai)"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -500,9 +476,9 @@ export default function RiwayatSurat({ warga }: Props) {
                             </button>
                             {s.file_url && (
                               <button
-                                onClick={() => handleDownload(s.file_url, s.file_name)}
+                                onClick={() => handleDownload(s.file_url, s.file_name, s)}
                                 className="p-2 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
-                                title="Download"
+                                title="Download (auto selesai)"
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-6-6m6 6l6-6m2 5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -519,54 +495,43 @@ export default function RiwayatSurat({ warga }: Props) {
             </div>
           </div>
 
-          {/* Mobile Cards Surat Keluar */}
           <div className="sm:hidden space-y-3">
-            {filteredSuratKeluar.length === 0 ? (
-              <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
-                <div className="text-5xl mb-3">📬</div>
-                <p className="text-gray-400 font-medium">Belum ada surat balasan</p>
-              </div>
-            ) : (
-              filteredSuratKeluar.map((s) => (
-                <div key={s.id_surat_keluar} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 space-y-3 card-hover">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-mono text-xs text-indigo-600 font-semibold">{s.id_surat_keluar}</p>
-                      <p className="font-mono text-xs text-gray-400 mt-0.5">{s.nomor_surat}</p>
-                      <p className="text-sm text-gray-700 truncate mt-1">{s.perihal}</p>
-                    </div>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ml-2 ${statusBadgeKeluar(s.status)}`}>
-                      <span>{statusIconKeluar(s.status)}</span>
-                      {s.status}
-                    </span>
+            {filteredSuratKeluar.map((s) => (
+              <div key={s.id_surat_keluar} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-mono text-xs text-indigo-600 font-semibold">{s.id_surat_keluar}</p>
+                    <p className="font-mono text-xs text-gray-400 mt-0.5">{s.nomor_surat}</p>
+                    <p className="text-sm text-gray-700 truncate mt-1">{s.perihal}</p>
                   </div>
-                  <p className="text-xs text-gray-400">{new Date(s.tanggal_kirim).toLocaleDateString('id-ID')}</p>
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      onClick={() => { setSelectedSuratKeluar(s); setShowDetail(true); }}
-                      className="flex-1 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-semibold hover:bg-blue-100 transition-colors"
-                    >
-                      👁️ Detail
-                    </button>
-                    {s.file_url && (
-                      <button
-                        onClick={() => handleDownload(s.file_url, s.file_name)}
-                        className="flex-1 py-2.5 bg-green-50 text-green-600 rounded-xl text-xs font-semibold hover:bg-green-100 transition-colors"
-                      >
-                        📄 Download
-                      </button>
-                    )}
-                  </div>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ml-2 ${statusBadgeKeluar(s.status)}`}>
+                    <span>{statusIconKeluar(s.status)}</span> {s.status}
+                  </span>
                 </div>
-              ))
-            )}
+                <p className="text-xs text-gray-400">{new Date(s.tanggal_kirim).toLocaleDateString('id-ID')}</p>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => handleOpenDetailKeluar(s)}
+                    className="flex-1 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-semibold"
+                  >
+                    👁️ Detail
+                  </button>
+                  {s.file_url && (
+                    <button
+                      onClick={() => handleDownload(s.file_url, s.file_name, s)}
+                      className="flex-1 py-2.5 bg-green-50 text-green-600 rounded-xl text-xs font-semibold"
+                    >
+                      📄 Download
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </>
       )}
 
-      {/* ================================================================
-          MODAL: DETAIL SURAT MASUK
-      ================================================================ */}
+      {/* Modal Detail Surat Masuk */}
       <Modal
         isOpen={showDetail && !!selectedSuratMasuk}
         onClose={() => { setShowDetail(false); setSelectedSuratMasuk(null); }}
@@ -579,10 +544,7 @@ export default function RiwayatSurat({ warga }: Props) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider opacity-70">Status Surat</p>
-                  <p className="text-2xl font-bold mt-1 flex items-center gap-2">
-                    <span>{statusIconMasuk(selectedSuratMasuk.status)}</span>
-                    {selectedSuratMasuk.status}
-                  </p>
+                  <p className="text-2xl font-bold mt-1">{statusIconMasuk(selectedSuratMasuk.status)} {selectedSuratMasuk.status}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-semibold uppercase tracking-wider opacity-70">ID Surat</p>
@@ -590,69 +552,29 @@ export default function RiwayatSurat({ warga }: Props) {
                 </div>
               </div>
             </div>
-
             <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Kategori</p>
-                  <p className="text-sm font-semibold mt-1">{selectedSuratMasuk.kategori}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Metode</p>
-                  <p className="text-sm font-semibold mt-1">
-                    {selectedSuratMasuk.metode === 'scan' ? '📷 Scan' : '📤 Upload'}
-                  </p>
-                </div>
-                <div className="sm:col-span-2">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Perihal</p>
-                  <p className="text-sm font-semibold mt-1">{selectedSuratMasuk.perihal}</p>
-                </div>
-                {selectedSuratMasuk.catatan && (
-                  <div className="sm:col-span-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Catatan</p>
-                    <p className="text-sm mt-1">{selectedSuratMasuk.catatan}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal Kirim</p>
-                  <p className="text-sm mt-1">{new Date(selectedSuratMasuk.tanggal_kirim).toLocaleString('id-ID')}</p>
-                </div>
-                {selectedSuratMasuk.tanggal_verifikasi && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal Verifikasi</p>
-                    <p className="text-sm mt-1">{new Date(selectedSuratMasuk.tanggal_verifikasi).toLocaleString('id-ID')}</p>
-                  </div>
-                )}
-                {selectedSuratMasuk.diverifikasi_oleh && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Diverifikasi Oleh</p>
-                    <p className="text-sm mt-1">{selectedSuratMasuk.diverifikasi_oleh}</p>
-                  </div>
-                )}
-                {selectedSuratMasuk.alasan_tolak && (
-                  <div className="sm:col-span-2">
-                    <p className="text-xs font-semibold text-red-500 uppercase tracking-wider">Alasan Tolak</p>
-                    <p className="text-sm text-red-600 bg-red-50 p-3 rounded-xl mt-1">{selectedSuratMasuk.alasan_tolak}</p>
-                  </div>
-                )}
+                <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Kategori</p><p className="text-sm font-semibold mt-1">{selectedSuratMasuk.kategori}</p></div>
+                <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Metode</p><p className="text-sm font-semibold mt-1">{selectedSuratMasuk.metode === 'scan' ? '📷 Scan' : '📤 Upload'}</p></div>
+                <div className="sm:col-span-2"><p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Perihal</p><p className="text-sm font-semibold mt-1">{selectedSuratMasuk.perihal}</p></div>
+                {selectedSuratMasuk.catatan && <div className="sm:col-span-2"><p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Catatan</p><p className="text-sm mt-1">{selectedSuratMasuk.catatan}</p></div>}
+                <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal Kirim</p><p className="text-sm mt-1">{new Date(selectedSuratMasuk.tanggal_kirim).toLocaleString('id-ID')}</p></div>
+                {selectedSuratMasuk.alasan_tolak && <div className="sm:col-span-2"><p className="text-xs font-semibold text-red-500 uppercase tracking-wider">Alasan Tolak</p><p className="text-sm text-red-600 bg-red-50 p-3 rounded-xl mt-1">{selectedSuratMasuk.alasan_tolak}</p></div>}
               </div>
             </div>
-
             {selectedSuratMasuk.file_url && (
               <button
                 onClick={() => handleDownload(selectedSuratMasuk.file_url, selectedSuratMasuk.file_name)}
-                className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-purple-500/30"
+                className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all"
               >
-                📄 Download File ({selectedSuratMasuk.file_name})
+                📄 Download File
               </button>
             )}
           </div>
         )}
       </Modal>
 
-      {/* ================================================================
-          MODAL: DETAIL SURAT KELUAR (BALASAN)
-      ================================================================ */}
+      {/* Modal Detail Surat Balasan */}
       <Modal
         isOpen={showDetail && !!selectedSuratKeluar}
         onClose={() => { setShowDetail(false); setSelectedSuratKeluar(null); }}
@@ -665,10 +587,10 @@ export default function RiwayatSurat({ warga }: Props) {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider opacity-70">Status Surat</p>
-                  <p className="text-2xl font-bold mt-1 flex items-center gap-2">
-                    <span>{statusIconKeluar(selectedSuratKeluar.status)}</span>
-                    {selectedSuratKeluar.status}
-                  </p>
+                  <p className="text-2xl font-bold mt-1">{statusIconKeluar(selectedSuratKeluar.status)} {selectedSuratKeluar.status}</p>
+                  {selectedSuratKeluar.status === 'selesai' && (
+                    <p className="text-xs mt-1 opacity-80">✅ Anda sudah membaca surat ini</p>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="text-xs font-semibold uppercase tracking-wider opacity-70">ID Surat</p>
@@ -676,43 +598,22 @@ export default function RiwayatSurat({ warga }: Props) {
                 </div>
               </div>
             </div>
-
             <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Nomor Surat</p>
-                  <p className="font-mono text-sm font-semibold mt-1">{selectedSuratKeluar.nomor_surat}</p>
-                </div>
-                <div className="sm:col-span-2">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Perihal</p>
-                  <p className="text-sm font-semibold mt-1">{selectedSuratKeluar.perihal}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Penerima</p>
-                  <p className="text-sm font-semibold mt-1">{selectedSuratKeluar.nama_penerima}</p>
-                  <p className="text-xs text-gray-500 font-mono">NIK: {selectedSuratKeluar.nik_penerima}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal Kirim</p>
-                  <p className="text-sm mt-1">{new Date(selectedSuratKeluar.tanggal_kirim).toLocaleString('id-ID')}</p>
-                </div>
+                <div className="sm:col-span-2"><p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Nomor Surat</p><p className="font-mono text-sm font-semibold mt-1">{selectedSuratKeluar.nomor_surat}</p></div>
+                <div className="sm:col-span-2"><p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Perihal</p><p className="text-sm font-semibold mt-1">{selectedSuratKeluar.perihal}</p></div>
+                <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Penerima</p><p className="text-sm font-semibold mt-1">{selectedSuratKeluar.nama_penerima}</p></div>
+                <div><p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal</p><p className="text-sm mt-1">{new Date(selectedSuratKeluar.tanggal_kirim).toLocaleString('id-ID')}</p></div>
               </div>
             </div>
-
             {selectedSuratKeluar.file_url && (
               <button
-                onClick={() => handleDownload(selectedSuratKeluar.file_url, selectedSuratKeluar.file_name)}
-                className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-indigo-500/30"
+                onClick={() => handleDownload(selectedSuratKeluar.file_url, selectedSuratKeluar.file_name, selectedSuratKeluar)}
+                className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all"
               >
-                📄 Download File Surat Balasan
+                📄 Download File Surat
               </button>
             )}
-
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-              <p className="text-xs text-blue-700">
-                ℹ️ Surat ini adalah balasan resmi dari Kemantren Tegalrejo untuk surat yang Anda kirim.
-              </p>
-            </div>
           </div>
         )}
       </Modal>

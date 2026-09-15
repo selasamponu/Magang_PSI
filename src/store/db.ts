@@ -10,9 +10,6 @@ import {
   dashboardApi,
 } from '../api/suratApi';
 
-// ================================================================
-// INIT DB
-// ================================================================
 export function initDB() {
   console.log('✅ initDB: Menggunakan API, bukan localStorage');
 }
@@ -131,8 +128,7 @@ export const SuratMasukDB = {
 };
 
 // ================================================================
-// SURAT KELUAR
-// ================================================================
+// SURAT KELUAR// ================================================================
 export const SuratKeluarDB = {
   getAll: async (): Promise<SuratKeluar[]> => {
     try {
@@ -153,6 +149,10 @@ export const SuratKeluarDB = {
 
   update: async (id: string, data: any, file?: File): Promise<any> => {
     return await suratKeluarApi.update(id, data, file);
+  },
+
+  updateStatus: async (id: string, status: 'terkirim' | 'dibaca' | 'selesai'): Promise<any> => {
+    return await suratKeluarApi.updateStatus(id, status);
   },
 
   delete: async (id: string): Promise<any> => {

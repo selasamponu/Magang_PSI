@@ -1,6 +1,6 @@
 // ================================================================
 // SERVER API - APLIKASI SURAT KEMANTREN TEGALREJO
-// Versi: 5.0.0 (FormData + Edit + Hapus)
+// Versi: 6.0.0 (FormData + Edit + Hapus + Auto-Selesai)
 // ================================================================
 const express = require('express');
 const mysql = require('mysql2');
@@ -10,7 +10,6 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const QRCode = require('qrcode');
 
 // Load .env
 dotenv.config();
@@ -36,7 +35,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // max 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
 
 // ================================================================
@@ -68,10 +67,8 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve folder uploads
 app.use('/uploads', express.static(uploadDir));
 
-// Request logger
 app.use((req, res, next) => {
   const origin = req.headers.origin || 'no-origin';
   console.log(`📥 ${req.method} ${req.url} | Origin: ${origin}`);
@@ -104,14 +101,8 @@ db.connect((err) => {
 // API ENDPOINTS
 // ================================================================
 
-// Test API
 app.get('/api/test', (req, res) => {
-  res.json({
-    success: true,
-    message: 'API is running!',
-    version: '5.0.0',
-    timestamp: new Date().toISOString(),
-  });
+  res.json({ success: true, message: 'API is running!', version: '6.0.0', timestamp: new Date().toISOString() });
 });
 
 // ===== LOGIN =====
@@ -119,17 +110,12 @@ app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
 
   if (!username || !password) {
-    return res.status(400).json({
-      success: false,
-      error: 'Username dan password diperlukan'
-    });
+    return res.status(400).json({ success: false, error: 'Username dan password diperlukan' });
   }
 
   const sql = 'SELECT * FROM users WHERE username = ? AND password = ? AND status = "aktif"';
   db.query(sql, [username, password], (err, results) => {
-    if (err) {
-      return res.status(500).json({ success: false, error: err.message });
-    }
+    if (err) return res.status(500).json({ success: false, error: err.message });
 
     if (results.length > 0) {
       const user = results[0];
@@ -137,26 +123,15 @@ app.post('/api/login', (req, res) => {
         'INSERT INTO log_aktivitas (id_log, user_id, nama_user, user_type, aktivitas, detail, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?)',
         [`LOG-${Date.now()}`, user.username, user.nama, 'user', 'LOGIN', `Login sebagai ${user.role}`, req.ip || '127.0.0.1']
       );
-
-      return res.json({
-        success: true,
-        message: 'Login berhasil!',
-        user: user,
-        userType: 'user'
-      });
+      return res.json({ success: true, message: 'Login berhasil!', user: user, userType: 'user' });
     }
 
     const sqlWarga = 'SELECT * FROM warga WHERE nik = ? AND password = ? AND status = "aktif"';
     db.query(sqlWarga, [username, password], (err, results) => {
-      if (err) {
-        return res.status(500).json({ success: false, error: err.message });
-      }
+      if (err) return res.status(500).json({ success: false, error: err.message });
 
       if (results.length === 0) {
-        return res.status(401).json({
-          success: false,
-          error: 'Username atau password salah!'
-        });
+        return res.status(401).json({ success: false, error: 'Username atau password salah!' });
       }
 
       const warga = results[0];
@@ -166,12 +141,7 @@ app.post('/api/login', (req, res) => {
         [`LOG-${Date.now()}`, warga.nik, warga.nama_lengkap, 'warga', 'LOGIN', 'Login sebagai warga', req.ip || '127.0.0.1']
       );
 
-      res.json({
-        success: true,
-        message: 'Login berhasil!',
-        user: warga,
-        userType: 'warga'
-      });
+      res.json({ success: true, message: 'Login berhasil!', user: warga, userType: 'warga' });
     });
   });
 });
@@ -183,7 +153,6 @@ app.post('/api/register', (req, res) => {
   if (!nik || !nama_lengkap || !alamat || !rt || !rw || !no_hp || !password) {
     return res.status(400).json({ success: false, error: 'Semua field harus diisi!' });
   }
-
   if (nik.length !== 16) {
     return res.status(400).json({ success: false, error: 'NIK harus 16 digit!' });
   }
@@ -210,7 +179,6 @@ app.get('/api/surat-masuk', (req, res) => {
   });
 });
 
-// POST SURAT MASUK - PAKAI MULTER
 app.post('/api/surat-masuk', upload.single('file'), (req, res) => {
   const { id_surat, nik_pengirim, nama_pengirim, metode, kategori, perihal, catatan } = req.body;
   const file = req.file;
@@ -235,7 +203,6 @@ app.post('/api/surat-masuk', upload.single('file'), (req, res) => {
   });
 });
 
-// UPDATE STATUS SURAT MASUK
 app.put('/api/surat-masuk/:id/status', (req, res) => {
   const { id } = req.params;
   const { status, diverifikasi_oleh, alasan_tolak } = req.body;
@@ -248,7 +215,6 @@ app.put('/api/surat-masuk/:id/status', (req, res) => {
   });
 });
 
-// DELETE SURAT MASUK
 app.delete('/api/surat-masuk/:id', (req, res) => {
   const { id } = req.params;
   db.query('DELETE FROM surat_masuk WHERE id_surat = ?', [id], (err) => {
@@ -267,7 +233,6 @@ app.get('/api/surat-keluar', (req, res) => {
   });
 });
 
-// ✅ POST SURAT KELUAR - PAKAI MULTER
 app.post('/api/surat-keluar', upload.single('file'), (req, res) => {
   const { id_surat_keluar, nik_penerima, nama_penerima, nomor_surat, perihal } = req.body;
   const file = req.file;
@@ -296,7 +261,6 @@ app.post('/api/surat-keluar', upload.single('file'), (req, res) => {
   });
 });
 
-// ✅ UPDATE SURAT KELUAR
 app.put('/api/surat-keluar/:id', upload.single('file'), (req, res) => {
   const { id } = req.params;
   const { nik_penerima, nomor_surat, perihal, file_url, file_name } = req.body;
@@ -328,7 +292,26 @@ app.put('/api/surat-keluar/:id', upload.single('file'), (req, res) => {
   }
 });
 
-// ✅ DELETE SURAT KELUAR
+// ✅ UPDATE STATUS SURAT KELUAR (untuk auto-selesai saat warga buka)
+app.put('/api/surat-keluar/:id/status', (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  if (!status) {
+    return res.status(400).json({ success: false, error: 'Status diperlukan' });
+  }
+
+  const sql = 'UPDATE surat_keluar SET status = ? WHERE id_surat_keluar = ?';
+  db.query(sql, [status, id], (err) => {
+    if (err) {
+      console.error('❌ DB error:', err.message);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+    console.log(`✅ Status surat keluar ${id} → ${status}`);
+    res.json({ success: true, message: 'Status berhasil diupdate' });
+  });
+});
+
 app.delete('/api/surat-keluar/:id', (req, res) => {
   const { id } = req.params;
   db.query('DELETE FROM surat_keluar WHERE id_surat_keluar = ?', [id], (err) => {
