@@ -21,7 +21,6 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
     warna_tema: '#8B3A1A',
   });
 
-  // Load pengaturan aplikasi
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -34,28 +33,6 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
             logo_url: data.logo_url || '/logo.png',
             warna_tema: data.warna_tema || '#8B3A1A',
           });
-
-          document.title = `${data.nama_aplikasi} - ${data.nama_instansi}`;
-
-          const faviconUrl = data.favicon_url || data.logo_url;
-          if (faviconUrl) {
-            const fullUrl = faviconUrl.startsWith('/uploads/')
-              ? `http://${window.location.hostname}:5000${faviconUrl}`
-              : faviconUrl;
-
-            let favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
-            if (!favicon) {
-              favicon = document.createElement('link');
-              favicon.rel = 'icon';
-              document.head.appendChild(favicon);
-            }
-            favicon.href = fullUrl;
-
-            let appleIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement;
-            if (appleIcon) {
-              appleIcon.href = fullUrl;
-            }
-          }
         }
       } catch (err) {
         console.error('Error loading app settings:', err);
@@ -108,25 +85,25 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden animate-in" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <aside className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 text-white transform transition-transform duration-300 ease-in-out shadow-2xl ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
+      <aside
+        className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 text-white transform transition-transform duration-300 ease-in-out shadow-2xl ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         style={{
           background: `linear-gradient(to bottom, ${appSettings.warna_tema}, ${adjustColor(appSettings.warna_tema, -20)}, ${appSettings.warna_tema})`
         }}
       >
         <div className="flex flex-col h-full">
-          {/* Logo */}
+          {/* LOGO — tanpa kotak putih, tanpa border */}
           <div className="p-4 border-b border-white/10">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-lg overflow-hidden p-1.5 flex-shrink-0">
-                <img
-                  src={logoUrl}
-                  alt="Logo"
-                  className="w-full h-full object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/logo.png';
-                  }}
-                />
-              </div>
+              <img
+                src={logoUrl}
+                alt="Logo"
+                className="w-12 h-12 object-contain flex-shrink-0"
+                style={{ background: 'transparent', border: 'none', padding: 0 }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/logo.png';
+                }}
+              />
               <div className="min-w-0">
                 <h1 className="font-bold text-sm leading-tight truncate">{appSettings.nama_aplikasi}</h1>
                 <p className="text-xs text-amber-200 leading-tight truncate">{appSettings.nama_instansi}</p>
@@ -134,7 +111,7 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
             </div>
           </div>
 
-          {/* Navigation */}
+          {/* NAVIGATION */}
           <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
             {menu.map((item) => {
               if (item.isDivider) {
@@ -158,7 +135,7 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
             })}
           </nav>
 
-          {/* User Info */}
+          {/* USER INFO */}
           <div className="p-3 border-t border-white/10">
             <div className="bg-white/5 rounded-xl p-3 backdrop-blur-sm">
               <div className="flex items-center gap-3">
@@ -186,6 +163,7 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
         </div>
       </aside>
 
+      {/* MAIN CONTENT */}
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
         <header className="bg-amber-50/80 backdrop-blur-xl shadow-sm border-b border-amber-200/50 px-4 py-3 flex items-center justify-between sticky top-0 z-30 print:hidden">
           <div className="flex items-center gap-3">
@@ -259,7 +237,6 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
   );
 }
 
-// Helper: Adjust warna (lighten/darken)
 function adjustColor(hex: string, percent: number): string {
   const num = parseInt(hex.replace('#', ''), 16);
   const amt = Math.round(2.55 * percent);

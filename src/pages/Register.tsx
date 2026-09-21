@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { registerWarga } from '../store/auth';
+import { SettingsDB } from '../store/db';
 
 interface RegisterProps {
   onRegisterSuccess: () => void;
@@ -13,6 +14,32 @@ export default function Register({ onRegisterSuccess, onGoLogin }: RegisterProps
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const [logoUrl, setLogoUrl] = useState('/logo.png');
+  const [appName, setAppName] = useState('Registrasi Warga');
+  const [appInstansi, setAppInstansi] = useState('Kemantren Tegalrejo Yogyakarta');
+
+  // Load logo & nama aplikasi dari database
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const data = await SettingsDB.get();
+        if (data) {
+          if (data.logo_url) {
+            setLogoUrl(
+              data.logo_url.startsWith('/uploads/')
+                ? `http://${window.location.hostname}:5000${data.logo_url}`
+                : data.logo_url
+            );
+          }
+          if (data.nama_instansi) setAppInstansi(data.nama_instansi);
+        }
+      } catch (err) {
+        console.error('Error loading settings:', err);
+      }
+    };
+    loadSettings();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -54,7 +81,7 @@ export default function Register({ onRegisterSuccess, onGoLogin }: RegisterProps
 
   return (
     <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 relative overflow-hidden">
-      {/* Background Coklat Solid */}
+      {/* Background Coklat */}
       <div className="absolute inset-0 bg-[#8B3A1A]">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#7C2D12]/50 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#A0522D]/40 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
@@ -80,15 +107,19 @@ export default function Register({ onRegisterSuccess, onGoLogin }: RegisterProps
         <div className="bg-white rounded-3xl p-8 shadow-2xl shadow-black/40 animate-scale-in">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-24 h-24 mb-4 rounded-3xl bg-white shadow-xl animate-float overflow-hidden p-2 border-2 border-amber-100">
-              <img 
-                src="/logo.png" 
-                alt="Logo Kemantren" 
+            <div className="inline-flex items-center justify-center w-24 h-24 mb-4 animate-float">
+              <img
+                src={logoUrl}
+                alt="Logo"
                 className="w-full h-full object-contain"
+                style={{ background: 'transparent', border: 'none' }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/logo.png';
+                }}
               />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Registrasi Warga</h1>
-            <p className="text-gray-600 mt-1 text-sm">Kemantren Tegalrejo Yogyakarta</p>
+            <h1 className="text-2xl font-bold text-gray-900">{appName}</h1>
+            <p className="text-gray-600 mt-1 text-sm">{appInstansi}</p>
           </div>
 
           {/* Form */}
@@ -232,7 +263,6 @@ export default function Register({ onRegisterSuccess, onGoLogin }: RegisterProps
             </button>
           </form>
 
-          {/* Login Link */}
           <div className="mt-6 text-center">
             <p className="text-gray-600 text-sm">
               Sudah punya akun?{' '}
@@ -247,7 +277,7 @@ export default function Register({ onRegisterSuccess, onGoLogin }: RegisterProps
         </div>
 
         <p className="text-center text-white/80 text-xs mt-6">
-          © 2026 Kemantren Tegalrejo Yogyakarta
+          © 2026 {appInstansi}
         </p>
       </div>
     </div>

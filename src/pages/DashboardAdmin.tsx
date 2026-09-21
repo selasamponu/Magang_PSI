@@ -69,7 +69,7 @@ export default function DashboardAdmin() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Dashboard Admin</h1>
-          <p className="text-sm text-gray-500">Selamat datang di Aplikasi Surat Kemantren Tegalrejo</p>
+          <p className="text-sm text-gray-500">Selamat datang di Aplikasi Surat Kemantren Tegalrejo Yogyakarta</p>
         </div>
         <button 
           onClick={refresh} 

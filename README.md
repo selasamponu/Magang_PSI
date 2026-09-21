@@ -33,8 +33,7 @@ Aplikasi Surat Eksternal adalah sistem informasi berbasis web untuk mengelola su
 1. Digitalisasi layanan surat
 2. Efisiensi pengelolaan
 3. Transparansi status
-4. Keamanan data dengan QR Code
-5. Pelaporan otomatis
+4. Pelaporan otomatis
 
 ---
 
@@ -88,11 +87,6 @@ Aplikasi Surat Eksternal adalah sistem informasi berbasis web untuk mengelola su
 - Format A4 Landscape
 - Save as PDF
 
-### Verifikasi QR
-- Publik tanpa login
-- Cek keaslian surat
-
----
 
 ## 🏗️ Arsitektur Sistem
 
@@ -114,7 +108,6 @@ Warga kirim surat → File disimpan di /uploads → Data di surat_masuk → Oper
 - Vite 6.3
 - Tailwind CSS 4.1
 - React Router 6.8
-- QRCode 1.5
 - date-fns 2.30
 - lucide-react 0.294
 - framer-motion 11.16
@@ -125,7 +118,6 @@ Warga kirim surat → File disimpan di /uploads → Data di surat_masuk → Oper
 - Express.js 5.2
 - MySQL2 3.24
 - Multer 2.3
-- QRCode 1.5
 - CORS 2.8
 - dotenv 17.4
 
@@ -226,7 +218,6 @@ README.md
 - file_name VARCHAR(255)
 - file_type VARCHAR(100)
 - file_size INT
-- qr_code_url LONGTEXT
 - tanggal_kirim DATETIME
 - status ENUM(terkirim, dibaca, selesai)
 
@@ -384,7 +375,6 @@ Lainnya:
 - SQL Injection: prepared statement
 - Role-Based Access: Admin, Operator, Warga
 - Log Audit: semua aksi tercatat
-- QR Verification: verifikasi keaslian surat
 
 ---
 

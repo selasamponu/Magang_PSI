@@ -50,7 +50,11 @@ export default function KelolaAplikasi({ currentUser }: Props) {
           favicon_url: data.favicon_url || '',
         });
         if (data.logo_url) {
-          setLogoPreview(data.logo_url);
+          setLogoPreview(
+            data.logo_url.startsWith('/uploads/')
+              ? `http://${window.location.hostname}:5000${data.logo_url}`
+              : data.logo_url
+          );
         }
       }
     } catch (err) {
@@ -162,7 +166,6 @@ export default function KelolaAplikasi({ currentUser }: Props) {
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* PREVIEW */}
         <div className="lg:col-span-1">
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-4">
             <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
@@ -208,7 +211,6 @@ export default function KelolaAplikasi({ currentUser }: Props) {
           </div>
         </div>
 
-        {/* FORM */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
             <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">

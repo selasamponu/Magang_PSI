@@ -4,20 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
     <title>Aplikasi Surat - Kemantren Tegalrejo</title>
-    
+
     <meta name="description" content="Sistem Informasi Manajemen Surat Masuk & Keluar - Kemantren Tegalrejo Yogyakarta" />
     <meta name="theme-color" content="#8B3A1A" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Surat Kemantren" />
     <meta name="mobile-web-app-capable" content="yes" />
-    
+
     <link rel="manifest" href="/manifest.json" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
-    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link id="dynamic-favicon" rel="icon" type="image/png" href="/logo.png" />
+    <link id="dynamic-apple-icon" rel="apple-touch-icon" href="/logo.png" />
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    
+
     <style>
       html, body {
         margin: 0;
@@ -28,10 +28,7 @@
         -webkit-tap-highlight-color: transparent;
         overscroll-behavior: none;
       }
-      #root {
-        width: 100%;
-        height: 100%;
-      }
+      #root { width: 100%; height: 100%; }
       #loading {
         position: fixed;
         inset: 0;
@@ -54,14 +51,11 @@
         animation: spin 1s linear infinite;
         margin-bottom: 16px;
       }
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
   <body>
     <div id="root"></div>
-    
     <div id="loading">
       <div class="spinner"></div>
       <p style="font-weight: 500;">Memuat Aplikasi Surat...</p>

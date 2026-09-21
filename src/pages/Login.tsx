@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { login } from '../store/auth';
+import { SettingsDB } from '../store/db';
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -12,6 +13,33 @@ export default function Login({ onLoginSuccess, onGoRegister }: LoginProps) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+
+  const [logoUrl, setLogoUrl] = useState('/logo.png');
+  const [appName, setAppName] = useState('Aplikasi Surat Eksternal');
+  const [appInstansi, setAppInstansi] = useState('Kemantren Tegalrejo Yogyakarta');
+
+  // Load logo & nama aplikasi dari database
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const data = await SettingsDB.get();
+        if (data) {
+          if (data.logo_url) {
+            setLogoUrl(
+              data.logo_url.startsWith('/uploads/')
+                ? `http://${window.location.hostname}:5000${data.logo_url}`
+                : data.logo_url
+            );
+          }
+          if (data.nama_aplikasi) setAppName(data.nama_aplikasi);
+          if (data.nama_instansi) setAppInstansi(data.nama_instansi);
+        }
+      } catch (err) {
+        console.error('Error loading settings:', err);
+      }
+    };
+    loadSettings();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +61,7 @@ export default function Login({ onLoginSuccess, onGoRegister }: LoginProps) {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 relative overflow-hidden">
-      {/* Background Coklat Solid */}
+      {/* Background Coklat */}
       <div className="absolute inset-0 bg-[#8B3A1A]">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#7C2D12]/50 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#A0522D]/40 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
@@ -57,17 +85,21 @@ export default function Login({ onLoginSuccess, onGoRegister }: LoginProps) {
 
       <div className="w-full max-w-md relative z-10">
         <div className="bg-white rounded-3xl p-8 shadow-2xl shadow-black/40 animate-scale-in">
-          {/* Logo */}
+          {/* Logo & Nama Aplikasi */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-24 h-24 mb-4 rounded-3xl bg-white shadow-xl animate-float overflow-hidden p-2 border-2 border-amber-100">
-              <img 
-                src="/logo.png" 
-                alt="Logo Kemantren" 
+            <div className="inline-flex items-center justify-center w-24 h-24 mb-4 animate-float">
+              <img
+                src={logoUrl}
+                alt="Logo"
                 className="w-full h-full object-contain"
+                style={{ background: 'transparent', border: 'none' }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/logo.png';
+                }}
               />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Aplikasi Surat Eksternal</h1>
-            <p className="text-gray-600 mt-1 text-sm">Kemantren Tegalrejo Yogyakarta</p>
+            <h1 className="text-2xl font-bold text-gray-900">{appName}</h1>
+            <p className="text-gray-600 mt-1 text-sm">{appInstansi}</p>
           </div>
 
           {/* Form */}
@@ -148,12 +180,10 @@ export default function Login({ onLoginSuccess, onGoRegister }: LoginProps) {
               </button>
             </p>
           </div>
-
-        
         </div>
 
         <p className="text-center text-white/80 text-xs mt-6">
-          © 2026 Kemantren Tegalrejo Yogyakarta
+          © 2026 {appInstansi}
         </p>
       </div>
     </div>

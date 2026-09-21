@@ -73,7 +73,7 @@ export default function DashboardWarga({ warga }: Props) {
             </div>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold drop-shadow-md">Halo, {warga.nama_lengkap}!</h1>
-              <p className="text-white/90 text-sm mt-0.5">Selamat datang di Aplikasi Surat</p>
+              <p className="text-white/90 text-sm mt-0.5">Selamat datang di Aplikasi Surat Kemantren Tegalrejo Yogyakarta</p>
             </div>
           </div>
 

@@ -7,7 +7,6 @@
 /* ================================================================
    ANIMATIONS
    ================================================================ */
-
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -51,43 +50,20 @@
 /* ================================================================
    UTILITY CLASSES
    ================================================================ */
-
-.animate-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-.animate-fade-in-up {
-  animation: fadeInUp 0.4s ease-out;
-}
-
-.animate-slide-in {
-  animation: slideInRight 0.3s ease-out;
-}
-
-.animate-slide-left {
-  animation: slideInLeft 0.3s ease-out;
-}
-
-.animate-scale-in {
-  animation: scaleIn 0.3s ease-out;
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
-}
-
-.animate-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
+.animate-in { animation: fadeIn 0.3s ease-out; }
+.animate-fade-in-up { animation: fadeInUp 0.4s ease-out; }
+.animate-slide-in { animation: slideInRight 0.3s ease-out; }
+.animate-slide-left { animation: slideInLeft 0.3s ease-out; }
+.animate-scale-in { animation: scaleIn 0.3s ease-out; }
+.animate-float { animation: float 3s ease-in-out infinite; }
+.animate-glow { animation: pulse-glow 2s ease-in-out infinite; }
 
 /* ================================================================
    HOVER EFFECTS
    ================================================================ */
-
 .hover-scale {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-
 .hover-scale:hover {
   transform: scale(1.02);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.15);
@@ -96,7 +72,6 @@
 .hover-lift {
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
-
 .hover-lift:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 40px -15px rgba(139, 92, 246, 0.3);
@@ -105,7 +80,6 @@
 /* ================================================================
    GLASS MORPHISM
    ================================================================ */
-
 .glass {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
@@ -123,14 +97,6 @@
 /* ================================================================
    GRADIENT TEXT
    ================================================================ */
-
-   .gradient-text-pink {
-    background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
 .gradient-text-pink {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   -webkit-background-clip: text;
@@ -141,21 +107,12 @@
 /* ================================================================
    SCROLLBAR
    ================================================================ */
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
   border-radius: 10px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #d97706 0%, #b45309 100%);
 }
@@ -163,16 +120,14 @@
 /* ================================================================
    SELECTION
    ================================================================ */
-
-   ::selection {
-    background-color: #d97706;
-    color: white;
-  }
+::selection {
+  background-color: #d97706;
+  color: white;
+}
 
 /* ================================================================
    TABLE RESPONSIVE
    ================================================================ */
-
 .overflow-x-auto {
   -webkit-overflow-scrolling: touch;
 }
@@ -180,7 +135,6 @@
 /* ================================================================
    LOADING SKELETON
    ================================================================ */
-
 .skeleton {
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 468px 100%;
@@ -191,11 +145,9 @@
 /* ================================================================
    CARD STYLES
    ================================================================ */
-
 .card-hover {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
-
 .card-hover:hover {
   transform: translateY(-2px);
   box-shadow: 0 20px 25px -5px rgba(139, 92, 246, 0.1),
@@ -205,12 +157,10 @@
 /* ================================================================
    BUTTON RIPPLE EFFECT
    ================================================================ */
-
 .btn-ripple {
   position: relative;
   overflow: hidden;
 }
-
 .btn-ripple::after {
   content: '';
   position: absolute;
@@ -224,66 +174,109 @@
   transform: scale(1, 1) translate(-50%);
   transform-origin: 50% 50%;
 }
-
 .btn-ripple:focus:not(:active)::after {
   animation: ripple 1s ease-out;
 }
-
 @keyframes ripple {
-  0% {
-    transform: scale(0, 0);
-    opacity: 0.5;
-  }
-  100% {
-    transform: scale(20, 20);
-    opacity: 0;
-  }
+  0% { transform: scale(0, 0); opacity: 0.5; }
+  100% { transform: scale(20, 20); opacity: 0; }
+}
+
+/* ================================================================
+   GLOBAL IMAGE — HILANGKAN BORDER & BACKGROUND
+   ================================================================ */
+img {
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
 }
 
 /* ================================================================
    PRINT STYLES
    ================================================================ */
-   @media print {
-    @page {
-      size: A4 landscape;
-      margin: 1cm;
-    }
-  
-    body {
-      background: white !important;
-      font-size: 11px !important;
-    }
-  
-    /* Sembunyikan elemen yang tidak perlu dicetak */
-    .print\:hidden {
-      display: none !important;
-    }
-  
-    /* Tampilkan elemen print-only */
-    .print\:block {
-      display: block !important;
-    }
-  
-    /* Tabel lebih rapi saat print */
-    table {
-      font-size: 10px !important;
-      page-break-inside: auto;
-    }
-  
-    tr {
-      page-break-inside: avoid;
-      page-break-after: auto;
-    }
-  
-    thead {
-      display: table-header-group;
-    }
-  
-    /* Hilangkan shadow & rounded saat print */
-    .card-hover,
-    .shadow-lg,
-    .shadow-2xl,
-    .shadow-sm {
-      box-shadow: none !important;
-    }
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 1cm;
   }
+
+  body {
+    background: white !important;
+    font-size: 11px !important;
+  }
+
+  .print\:hidden { display: none !important; }
+  .print\:block { display: block !important; }
+
+  table {
+    font-size: 10px !important;
+    page-break-inside: auto;
+  }
+  tr { page-break-inside: avoid; page-break-after: auto; }
+  thead { display: table-header-group; }
+
+  .card-hover,
+  .shadow-lg,
+  .shadow-2xl,
+  .shadow-sm {
+    box-shadow: none !important;
+  }
+
+  /* Logo saat print — tanpa border, tanpa background */
+  img {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+}
+/* ================================================================
+   PRINT — BIAR 1 HALAMAN
+   ================================================================ */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 0.7cm;
+  }
+
+  body {
+    background: white !important;
+    font-size: 9px !important;
+  }
+
+  .print\:hidden { display: none !important; }
+  .print\:block { display: block !important; }
+
+  table {
+    font-size: 9px !important;
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  td, th {
+    padding: 1px 3px !important;
+  }
+
+  .card-hover,
+  .shadow-lg,
+  .shadow-2xl,
+  .shadow-sm {
+    box-shadow: none !important;
+  }
+
+  /* Cegah elemen pindah halaman */
+  .print\:no-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+}

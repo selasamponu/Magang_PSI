@@ -1,4 +1,4 @@
-const CACHE_NAME = 'surat-kemantren-v2';
+const CACHE_NAME = 'surat-kemantren-v4';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -45,7 +45,6 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/uploads/')) {
     return;
   }
-
   if (request.method !== 'GET') {
     return;
   }
@@ -57,11 +56,7 @@ self.addEventListener('fetch', (event) => {
       }
       return fetch(request)
         .then((response) => {
-          if (
-            response &&
-            response.status === 200 &&
-            response.type === 'basic'
-          ) {
+          if (response && response.status === 200 && response.type === 'basic') {
             const responseToCache = response.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put(request, responseToCache);
