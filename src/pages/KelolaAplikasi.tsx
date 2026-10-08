@@ -25,7 +25,7 @@ export default function KelolaAplikasi({ currentUser }: Props) {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const presetColors = [
-    { name: 'Coklat Kemantren', value: '#8B3A1A' },
+    { name: 'Coklat', value: '#8B3A1A' },
     { name: 'Merah', value: '#DC2626' },
     { name: 'Biru', value: '#2563EB' },
     { name: 'Hijau', value: '#16A34A' },
@@ -113,7 +113,7 @@ export default function KelolaAplikasi({ currentUser }: Props) {
         detail: `Update pengaturan aplikasi`,
       });
 
-      setSuccess('✅ Pengaturan berhasil disimpan! Refresh halaman untuk melihat perubahan.');
+      setSuccess('Pengaturan berhasil disimpan! Refresh halaman untuk melihat perubahan.');
       setLogoFile(null);
       if (logoInputRef.current) logoInputRef.current.value = '';
       await refresh();
@@ -132,8 +132,8 @@ export default function KelolaAplikasi({ currentUser }: Props) {
   const handleReset = () => {
     if (confirm('Reset ke default? Logo & nama aplikasi akan dikembalikan ke semula.')) {
       setForm({
-        nama_aplikasi: 'Aplikasi Surat Eksternal',
-        nama_instansi: 'Kemantren Tegalrejo Yogyakarta',
+        nama_aplikasi: 'Aplikasi Surat',
+        nama_instansi: 'Kemantren Tegalrejo',
         warna_tema: '#8B3A1A',
         logo_url: '',
         favicon_url: '',
@@ -146,6 +146,7 @@ export default function KelolaAplikasi({ currentUser }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold gradient-text">⚙️ Pengaturan Aplikasi</h1>
@@ -166,19 +167,26 @@ export default function KelolaAplikasi({ currentUser }: Props) {
       </div>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* ============================================================ */}
+        {/* KOLOM KIRI — PREVIEW (STICKY)                                 */}
+        {/* ============================================================ */}
         <div className="lg:col-span-1">
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sticky top-4">
-            <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5 sticky top-4 space-y-4">
+            <h3 className="font-bold text-gray-800 flex items-center gap-2">
               <span>👁️</span> Preview
             </h3>
 
-            <div className="rounded-2xl p-4 space-y-3" style={{ backgroundColor: form.warna_tema }}>
+            {/* Preview Sidebar */}
+            <div
+              className="rounded-2xl p-4 space-y-3"
+              style={{ backgroundColor: form.warna_tema }}
+            >
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center p-1.5 flex-shrink-0">
+                <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center p-1.5 flex-shrink-0 shadow-md">
                   {logoPreview ? (
                     <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
                   ) : (
-                    <span className="text-2xl">📬</span>
+                    <span className="text-xl">📬</span>
                   )}
                 </div>
                 <div className="min-w-0">
@@ -192,38 +200,44 @@ export default function KelolaAplikasi({ currentUser }: Props) {
               </div>
             </div>
 
-            <div className="mt-4 space-y-2">
-              <div className="text-xs text-gray-500 font-semibold">Tombol dengan warna tema:</div>
+            {/* Tombol Contoh */}
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500 font-semibold">Tombol dengan warna tema:</p>
               <button
                 type="button"
-                className="w-full py-3 text-white rounded-xl text-sm font-semibold shadow-lg"
+                className="w-full py-3 text-white rounded-xl text-sm font-semibold shadow-lg transition-all hover:opacity-90"
                 style={{ backgroundColor: form.warna_tema }}
               >
                 📤 Tombol Contoh
               </button>
             </div>
 
-            <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-              <p className="text-xs text-blue-700">
+            {/* Tips */}
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl">
+              <p className="text-xs text-blue-700 leading-relaxed">
                 💡 <strong>Tips:</strong> Gunakan logo dengan background transparan (PNG/SVG) untuk hasil terbaik.
               </p>
             </div>
           </div>
         </div>
 
+        {/* ============================================================ */}
+        {/* KOLOM KANAN — FORM                                            */}
+        {/* ============================================================ */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6">
+          {/* Logo Aplikasi */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5">
             <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
               <span>🖼️</span> Logo Aplikasi
             </h3>
 
             <div className="flex flex-col sm:flex-row items-start gap-4">
-              <div className="w-32 h-32 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border-2 border-dashed border-amber-200 flex items-center justify-center p-3 flex-shrink-0">
+              <div className="w-28 h-28 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border-2 border-dashed border-amber-200 flex items-center justify-center p-3 flex-shrink-0">
                 {logoPreview ? (
                   <img src={logoPreview} alt="Preview" className="w-full h-full object-contain" />
                 ) : (
                   <div className="text-center">
-                    <div className="text-4xl mb-1">📬</div>
+                    <div className="text-3xl mb-1">📬</div>
                     <p className="text-xs text-gray-400">Belum ada logo</p>
                   </div>
                 )}
@@ -240,27 +254,31 @@ export default function KelolaAplikasi({ currentUser }: Props) {
                 <button
                   type="button"
                   onClick={() => logoInputRef.current?.click()}
-                  className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-purple-500/30"
+                  className="w-full py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
                 >
                   📁 Pilih Logo Baru
                 </button>
-                <p className="text-xs text-gray-500 mt-2">
-                  Format: PNG, JPG, SVG • Max 2MB • Rekomendasi 512x512 px
-                </p>
-                <p className="text-xs text-blue-600 mt-1">
-                  💡 Logo akan otomatis jadi favicon & PWA icon
-                </p>
+                <div className="mt-3 space-y-1">
+                  <p className="text-xs text-gray-500">
+                    Format: PNG, JPG, SVG • Max 2MB • Rekomendasi 512x512 px
+                  </p>
+                  <p className="text-xs text-blue-600">
+                    💡 Logo akan otomatis jadi favicon & PWA icon
+                  </p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-4">
+          {/* Informasi Aplikasi */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5 space-y-4">
             <h3 className="font-bold text-gray-800 flex items-center gap-2">
               <span>📝</span> Informasi Aplikasi
             </h3>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <span>📱</span>
                 Nama Aplikasi <span className="text-red-500">*</span>
               </label>
               <input
@@ -275,7 +293,8 @@ export default function KelolaAplikasi({ currentUser }: Props) {
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <span>🏛️</span>
                 Nama Instansi <span className="text-red-500">*</span>
               </label>
               <input
@@ -290,30 +309,37 @@ export default function KelolaAplikasi({ currentUser }: Props) {
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 space-y-4">
+          {/* Warna Tema */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-5 space-y-4">
             <h3 className="font-bold text-gray-800 flex items-center gap-2">
               <span>🎨</span> Warna Tema
             </h3>
 
-            <div className="grid grid-cols-5 gap-3">
-              {presetColors.map((color) => (
-                <button
-                  key={color.value}
-                  type="button"
-                  onClick={() => setForm({ ...form, warna_tema: color.value })}
-                  className={`aspect-square rounded-xl transition-all hover:scale-110 ${
-                    form.warna_tema === color.value
-                      ? 'ring-4 ring-offset-2 ring-purple-500 scale-110'
-                      : 'ring-1 ring-gray-200'
-                  }`}
-                  style={{ backgroundColor: color.value }}
-                  title={color.name}
-                />
-              ))}
+            {/* Preset Colors — KECIL */}
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-3">Pilih Warna Cepat</p>
+              <div className="flex flex-wrap gap-2">
+                {presetColors.map((color) => (
+                  <button
+                    key={color.value}
+                    type="button"
+                    onClick={() => setForm({ ...form, warna_tema: color.value })}
+                    className={`w-10 h-10 rounded-lg transition-all hover:scale-110 ${
+                      form.warna_tema === color.value
+                        ? 'ring-2 ring-offset-2 ring-purple-500 scale-110'
+                        : 'ring-1 ring-gray-200'
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                    title={color.name}
+                  />
+                ))}
+              </div>
             </div>
 
+            {/* Custom Color */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <span>🎨</span>
                 Warna Custom
               </label>
               <div className="flex gap-3">
@@ -321,7 +347,7 @@ export default function KelolaAplikasi({ currentUser }: Props) {
                   type="color"
                   value={form.warna_tema}
                   onChange={(e) => setForm({ ...form, warna_tema: e.target.value })}
-                  className="w-16 h-12 rounded-xl border border-gray-200 cursor-pointer"
+                  className="w-14 h-12 rounded-xl border border-gray-200 cursor-pointer flex-shrink-0"
                 />
                 <input
                   type="text"
@@ -334,6 +360,7 @@ export default function KelolaAplikasi({ currentUser }: Props) {
             </div>
           </div>
 
+          {/* Error */}
           {error && (
             <div className="bg-red-50 border-2 border-red-200 rounded-xl p-4 text-red-700 text-sm flex items-center gap-2">
               <span className="text-lg">⚠️</span>
@@ -341,6 +368,7 @@ export default function KelolaAplikasi({ currentUser }: Props) {
             </div>
           )}
 
+          {/* Success */}
           {success && (
             <div className="bg-green-50 border-2 border-green-200 rounded-xl p-4 text-green-700 text-sm flex items-center gap-2">
               <span className="text-lg">✅</span>
@@ -348,20 +376,31 @@ export default function KelolaAplikasi({ currentUser }: Props) {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row gap-3 justify-end">
+          {/* Tombol Aksi */}
+          <div className="flex flex-col sm:flex-row gap-3 justify-end pt-3 border-t border-gray-100">
             <button
               type="button"
               onClick={handleReset}
-              className="px-5 py-3 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all"
+              className="px-5 py-3 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all flex items-center justify-center gap-2"
             >
               🔄 Reset Default
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 shadow-lg shadow-purple-500/30 transition-all"
+              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 shadow-lg shadow-purple-500/30 transition-all flex items-center justify-center gap-2"
             >
-              {saving ? '⏳ Menyimpan...' : '💾 Simpan Pengaturan'}
+              {saving ? (
+                <>
+                  <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Menyimpan...
+                </>
+              ) : (
+                <>💾 Simpan Pengaturan</>
+              )}
             </button>
           </div>
         </div>

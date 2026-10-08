@@ -193,90 +193,233 @@ img {
 }
 
 /* ================================================================
-   PRINT STYLES
+   PRINT STYLES — LAPORAN (A4 PORTRAIT)
    ================================================================ */
 @media print {
   @page {
-    size: A4 landscape;
-    margin: 1cm;
+    size: A4 portrait;
+    margin: 1cm 0.8cm;
   }
 
-  body {
+  /* ============================================================ */
+  /* ✅ PAKSA SEMUA ELEMEN JADI PUTIH SAAT PRINT                   */
+  /* Ini yang menghilangkan background krem/orange/yellow          */
+  /* ============================================================ */
+  *,
+  *::before,
+  *::after {
     background: white !important;
-    font-size: 11px !important;
-  }
-
-  .print\:hidden { display: none !important; }
-  .print\:block { display: block !important; }
-
-  table {
-    font-size: 10px !important;
-    page-break-inside: auto;
-  }
-  tr { page-break-inside: avoid; page-break-after: auto; }
-  thead { display: table-header-group; }
-
-  .card-hover,
-  .shadow-lg,
-  .shadow-2xl,
-  .shadow-sm {
+    background-color: white !important;
+    background-image: none !important;
     box-shadow: none !important;
+    text-shadow: none !important;
   }
 
-  /* Logo saat print — tanpa border, tanpa background */
-  img {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
+  html, body {
+    background: white !important;
+    background-image: none !important;
+    font-size: 9px !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    margin: 0 !important;
     padding: 0 !important;
-    border-radius: 0 !important;
-  }
-}
-/* ================================================================
-   PRINT — BIAR 1 HALAMAN
-   ================================================================ */
-@media print {
-  @page {
-    size: A4 landscape;
-    margin: 0.7cm;
   }
 
-  body {
+  /* ✅ Hapus background body, root, main, layout, dan semua wrapper */
+  body,
+  #root,
+  main,
+  .min-h-screen,
+  .flex,
+  .flex-1,
+  [class*="bg-gradient"],
+  [class*="bg-amber"],
+  [class*="bg-orange"],
+  [class*="bg-yellow"],
+  [class*="from-amber"],
+  [class*="from-orange"],
+  [class*="from-yellow"],
+  [class*="via-amber"],
+  [class*="via-orange"],
+  [class*="via-yellow"],
+  [class*="to-amber"],
+  [class*="to-orange"],
+  [class*="to-yellow"],
+  [class*="bg-white"],
+  [class*="bg-gray-50"] {
     background: white !important;
-    font-size: 9px !important;
+    background-color: white !important;
+    background-image: none !important;
   }
 
-  .print\:hidden { display: none !important; }
-  .print\:block { display: block !important; }
+  /* ============================================================ */
+  /* ✅ KECUALI: Pertahankan warna header tabel (abu-abu)          */
+  /* ============================================================ */
+  th {
+    background-color: #e5e7eb !important;
+    background-image: none !important;
+  }
 
+  /* Border tabel tetap hitam */
+  table, tr, td, th {
+    background-clip: padding-box;
+  }
+
+  /* ============================================================ */
+  /* Sembunyikan elemen non-print                                  */
+  /* ============================================================ */
+  .print\:hidden,
+  .no-print,
+  nav,
+  header,
+  footer,
+  aside {
+    display: none !important;
+  }
+
+  /* Tampilkan elemen print */
+  .print\:block {
+    display: block !important;
+  }
+
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Container utama laporan — hilangkan padding, shadow, border, bg */
+  .bg-white.rounded-2xl.shadow-lg.border.border-gray-100.p-6 {
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    max-width: 100% !important;
+    background: white !important;
+  }
+
+  /* ============================================================ */
+  /* Tabel — full width, compact, rapi                            */
+  /* ============================================================ */
   table {
-    font-size: 9px !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed;
     page-break-inside: auto;
+    font-size: 8.5px !important;
+    background: white !important;
+  }
+
+  thead {
+    display: table-header-group;
+    background: white !important;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  tbody {
+    background: white !important;
   }
 
   tr {
     page-break-inside: avoid;
     page-break-after: auto;
+    background: white !important;
   }
 
-  thead {
-    display: table-header-group;
+  td {
+    background: white !important;
+    background-color: white !important;
   }
 
-  td, th {
-    padding: 1px 3px !important;
+  th, td {
+    border: 0.5px solid #333 !important;
+    padding: 2px 3px !important;
+    font-size: 8.5px !important;
+    line-height: 1.3 !important;
+    vertical-align: top;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: normal !important;
+    text-align: left;
   }
 
+  th {
+    background-color: #e5e7eb !important;
+    font-weight: bold !important;
+    text-align: center !important;
+    font-size: 8px !important;
+    padding: 3px 2px !important;
+  }
+
+  /* ============================================================ */
+  /* LEBAR KOLOM UNTUK LAPORAN 8 KOLOM (SURAT MASUK/KELUAR)       */
+  /* ============================================================ */
+  th:nth-child(1), td:nth-child(1) { width: 3%; text-align: center; }
+  th:nth-child(2), td:nth-child(2) { width: 12%; font-family: monospace; font-size: 7.5px !important; }
+  th:nth-child(3), td:nth-child(3) { width: 12%; }
+  th:nth-child(4), td:nth-child(4) { width: 12%; font-family: monospace; font-size: 7.5px !important; }
+  th:nth-child(5), td:nth-child(5) { width: 11%; }
+  th:nth-child(6), td:nth-child(6) { width: 20%; }
+  th:nth-child(7), td:nth-child(7) { width: 9%; text-align: center; }
+  th:nth-child(8), td:nth-child(8) { width: 11%; white-space: nowrap !important; }
+
+  /* ============================================================ */
+  /* Hilangkan shadow dari semua elemen                           */
+  /* ============================================================ */
   .card-hover,
   .shadow-lg,
   .shadow-2xl,
-  .shadow-sm {
+  .shadow-sm,
+  .shadow-md,
+  .shadow-xl {
     box-shadow: none !important;
   }
 
-  /* Cegah elemen pindah halaman */
-  .print\:no-break {
+  /* ============================================================ */
+  /* Judul laporan                                                */
+  /* ============================================================ */
+  h1 {
+    font-size: 14px !important;
+    margin: 6px 0 !important;
+    font-weight: bold;
+  }
+
+  h2 {
+    font-size: 12px !important;
+  }
+
+  /* Kop surat */
+  .print\:block.border-b-2 {
+    border-bottom: 2px solid #000 !important;
+    padding-bottom: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  /* Tanda tangan */
+  .hidden.print\:block.mt-10 {
+    margin-top: 20px !important;
     page-break-inside: avoid;
-    break-inside: avoid;
+  }
+
+  /* ============================================================ */
+  /* ✅ HAPUS BACKGROUND WARNA DARI BEBERAPA KOMPONEN UMUM         */
+  /* ============================================================ */
+  /* Gradient dari Tailwind */
+  [class*="bg-gradient-to"] {
+    background-image: none !important;
+    background: white !important;
+  }
+
+  /* Status badge warna — biar tetap kelihatan saat print */
+  /* Optional: comment ini kalau mau semua putih */
+  .bg-blue-100, .bg-sky-100, .bg-green-100, .bg-red-100,
+  .bg-yellow-100, .bg-purple-100, .bg-indigo-100, .bg-teal-100,
+  .bg-pink-100, .bg-gray-100, .bg-amber-100, .bg-orange-100 {
+    background: white !important;
   }
 }

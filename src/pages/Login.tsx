@@ -15,7 +15,7 @@ export default function Login({ onLoginSuccess, onGoRegister }: LoginProps) {
   const [showPass, setShowPass] = useState(false);
 
   const [logoUrl, setLogoUrl] = useState('/logo.png');
-  const [appName, setAppName] = useState('Aplikasi Surat Eksternal');
+  const [appName, setAppName] = useState('Aplikasi Surat');
   const [appInstansi, setAppInstansi] = useState('Kemantren Tegalrejo Yogyakarta');
 
   // Load logo & nama aplikasi dari database
@@ -60,11 +60,12 @@ export default function Login({ onLoginSuccess, onGoRegister }: LoginProps) {
   };
 
   return (
+    /* ✅ BACKGROUND KUNING SOFT */
     <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 relative overflow-hidden">
-      {/* Background Coklat */}
-      <div className="absolute inset-0 bg-[#8B3A1A]">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#7C2D12]/50 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#A0522D]/40 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+      <div className="absolute inset-0 bg-gradient-to-br from-yellow-200 via-amber-100 to-yellow-300">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-amber-300/40 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-yellow-300/40 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-amber-200/50 rounded-full blur-3xl" />
       </div>
 
       {/* Floating particles */}
@@ -72,19 +73,24 @@ export default function Login({ onLoginSuccess, onGoRegister }: LoginProps) {
         {[...Array(15)].map((_, i) => (
           <div
             key={i}
-            className="absolute w-1.5 h-1.5 bg-white/20 rounded-full"
+            className="absolute w-1.5 h-1.5 bg-amber-500/40 rounded-full"
             style={{
               left: `${(i * 7) % 100}%`,
               top: `${(i * 13) % 100}%`,
               animation: `float ${3 + (i % 3)}s ease-in-out infinite`,
-              animationDelay: `${i * 0.3}s`
+              animationDelay: `${i * 0.3}s`,
             }}
           />
         ))}
       </div>
 
       <div className="w-full max-w-md relative z-10">
-        <div className="bg-white rounded-3xl p-8 shadow-2xl shadow-black/40 animate-scale-in">
+
+        {/* ============================================================ */}
+        {/* ✅ CARD HITAM (yang tadinya putih)                            */}
+        {/* ============================================================ */}
+        <div className="bg-gray-900 rounded-3xl p-8 shadow-2xl shadow-black/50 animate-scale-in border border-gray-700/50">
+
           {/* Logo & Nama Aplikasi */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-24 h-24 mb-4 animate-float">
@@ -98,83 +104,112 @@ export default function Login({ onLoginSuccess, onGoRegister }: LoginProps) {
                 }}
               />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">{appName}</h1>
-            <p className="text-gray-600 mt-1 text-sm">{appInstansi}</p>
+
+            {/* JUDUL DENGAN GRADIENT COKLAT → EMAS */}
+            <h1
+              className="text-2xl font-bold tracking-tight"
+              style={{
+                background: 'linear-gradient(135deg, #F59E0B 0%, #FCD34D 30%, #F59E0B 60%, #D97706 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              {appName}
+            </h1>
+
+            <p className="text-gray-400 mt-1 text-sm">{appInstansi}</p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
+
+            {/* Username / NIK */}
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">Username / NIK</label>
+              <label className="block text-sm font-semibold text-amber-400 mb-2">
+                Username / NIK <span className="text-red-400">*</span>
+              </label>
               <div className="relative group">
-                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[#8B3A1A] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-amber-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-12 pr-4 py-3.5 bg-amber-50 border-2 border-amber-100 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8B3A1A] focus:border-[#8B3A1A] focus:bg-white transition-all"
+                  /* ✅ INPUT TETAP ABU-ABU KEBIRUAN (SESUAI REQUEST) */
+                  className="w-full pl-12 pr-4 py-3.5 bg-gray-100 border-2 border-gray-300 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 focus:bg-white transition-all"
                   placeholder="Masukkan username atau NIK"
                   required
                 />
               </div>
+              <p className="text-xs text-gray-400 mt-1">Username untuk petugas, NIK untuk warga</p>
             </div>
 
+            {/* Password */}
             <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-2">Password</label>
+              <label className="block text-sm font-semibold text-amber-400 mb-2">
+                Password <span className="text-red-400">*</span>
+              </label>
               <div className="relative group">
-                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[#8B3A1A] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-amber-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 <input
                   type={showPass ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3.5 bg-amber-50 border-2 border-amber-100 rounded-2xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#8B3A1A] focus:border-[#8B3A1A] focus:bg-white transition-all"
+                  /* ✅ INPUT TETAP ABU-ABU KEBIRUAN (SESUAI REQUEST) */
+                  className="w-full pl-12 pr-12 py-3.5 bg-gray-100 border-2 border-gray-300 rounded-2xl text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 focus:bg-white transition-all"
                   placeholder="Masukkan password"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPass(!showPass)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#8B3A1A] transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-amber-400 transition-colors text-lg"
+                  title={showPass ? 'Sembunyikan password' : 'Lihat password'}
                 >
                   {showPass ? '🙈' : '👁️'}
                 </button>
               </div>
             </div>
 
+            {/* Error */}
             {error && (
-              <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4 text-red-700 text-sm text-center animate-in flex items-center justify-center gap-2">
+              <div className="bg-red-500/20 border-2 border-red-500/40 rounded-2xl p-4 text-red-300 text-sm text-center animate-in flex items-center justify-center gap-2">
                 <span>⚠️</span> {error}
               </div>
             )}
 
+            {/* Submit Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-4 bg-gradient-to-r from-[#8B3A1A] via-[#A0522D] to-[#8B3A1A] bg-[length:200%_100%] text-white font-bold rounded-2xl hover:bg-[position:100%_0] transition-all duration-500 disabled:opacity-50 shadow-lg shadow-[#8B3A1A]/50 hover:shadow-[#8B3A1A]/70 btn-ripple"
+              className="w-full py-4 bg-gradient-to-r from-[#8B3A1A] via-[#A0522D] to-[#8B3A1A] bg-[length:200%_100%] text-white font-bold rounded-2xl hover:bg-[position:100%_0] transition-all duration-500 disabled:opacity-50 shadow-lg shadow-[#8B3A1A]/50 hover:shadow-[#8B3A1A]/70 btn-ripple flex items-center justify-center gap-2"
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
+                <>
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
                   Memproses...
-                </span>
-              ) : '🔐 Login'}
+                </>
+              ) : (
+                <>🔐 Login</>
+              )}
             </button>
           </form>
 
           {/* Register Link */}
           <div className="mt-6 text-center">
-            <p className="text-gray-600 text-sm">
+            <p className="text-gray-400 text-sm">
               Belum punya akun?{' '}
               <button
+                type="button"
                 onClick={onGoRegister}
-                className="text-[#8B3A1A] font-semibold hover:underline transition-all"
+                className="text-amber-400 font-semibold hover:text-amber-300 hover:underline transition-all"
               >
                 Daftar di sini
               </button>
@@ -182,7 +217,7 @@ export default function Login({ onLoginSuccess, onGoRegister }: LoginProps) {
           </div>
         </div>
 
-        <p className="text-center text-white/80 text-xs mt-6">
+        <p className="text-center text-amber-900 text-xs mt-6 font-medium">
           © 2026 {appInstansi}
         </p>
       </div>

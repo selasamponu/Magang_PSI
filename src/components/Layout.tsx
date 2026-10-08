@@ -80,19 +80,44 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
     : appSettings.logo_url;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 flex">
+    /* Background BODY — Kuning Soft (sama seperti Login) */
+    <div className="min-h-screen flex bg-gradient-to-br from-yellow-200 via-amber-100 to-yellow-300 relative overflow-hidden">
+      {/* Orb dekoratif kuning */}
+      <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-amber-300/40 rounded-full blur-3xl animate-pulse pointer-events-none" />
+      <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-yellow-300/40 rounded-full blur-3xl animate-pulse pointer-events-none" style={{ animationDelay: '1s' }} />
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-amber-200/50 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Particles */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        {[...Array(15)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-1.5 h-1.5 bg-amber-500/40 rounded-full"
+            style={{
+              left: `${(i * 7) % 100}%`,
+              top: `${(i * 13) % 100}%`,
+              animation: `float ${3 + (i % 3)}s ease-in-out infinite`,
+              animationDelay: `${i * 0.3}s`,
+            }}
+          />
+        ))}
+      </div>
+
       {sidebarOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden animate-in" onClick={() => setSidebarOpen(false)} />
       )}
 
+      {/* ============================================================ */}
+      {/* ✅ SIDEBAR HITAM ELEGAN                                       */}
+      {/* ============================================================ */}
       <aside
         className={`fixed lg:sticky top-0 left-0 z-50 h-screen w-64 text-white transform transition-transform duration-300 ease-in-out shadow-2xl ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         style={{
-          background: `linear-gradient(to bottom, ${appSettings.warna_tema}, ${adjustColor(appSettings.warna_tema, -20)}, ${appSettings.warna_tema})`
+          background: `linear-gradient(180deg, #000000 0%, #0a0a0a 40%, #111111 70%, #1a1a1a 100%)`
         }}
       >
         <div className="flex flex-col h-full">
-          {/* LOGO — tanpa kotak putih, tanpa border */}
+          {/* LOGO */}
           <div className="p-4 border-b border-white/10">
             <div className="flex items-center gap-3">
               <img
@@ -106,7 +131,7 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
               />
               <div className="min-w-0">
                 <h1 className="font-bold text-sm leading-tight truncate">{appSettings.nama_aplikasi}</h1>
-                <p className="text-xs text-amber-200 leading-tight truncate">{appSettings.nama_instansi}</p>
+                <p className="text-xs text-amber-300 leading-tight truncate">{appSettings.nama_instansi}</p>
               </div>
             </div>
           </div>
@@ -123,8 +148,8 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
                   onClick={() => { onNavigate(item.id); setSidebarOpen(false); }}
                   className={`w-full text-left px-3 py-2.5 rounded-xl text-sm flex items-center gap-3 transition-all duration-200 ${
                     currentPage === item.id
-                      ? 'bg-white/30 text-white font-medium shadow-lg backdrop-blur-sm'
-                      : 'text-white/80 hover:bg-white/10 hover:text-white hover:translate-x-1'
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-lg shadow-amber-500/30'
+                      : 'text-gray-300 hover:bg-white/10 hover:text-white hover:translate-x-1'
                   }`}
                 >
                   <span className="text-lg">{item.icon}</span>
@@ -137,22 +162,22 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
 
           {/* USER INFO */}
           <div className="p-3 border-t border-white/10">
-            <div className="bg-white/5 rounded-xl p-3 backdrop-blur-sm">
+            <div className="bg-white/5 rounded-xl p-3 backdrop-blur-sm border border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-400 rounded-lg flex items-center justify-center text-xl shadow-lg flex-shrink-0">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg flex items-center justify-center text-xl shadow-lg flex-shrink-0">
                   {userRole === 'admin' ? '👨‍💼' : userRole === 'operator' ? '🧑‍💼' : '👤'}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                  <p className="text-sm font-medium truncate flex items-center gap-1.5 text-white">
                     <span className="text-base">
                       {userRole === 'admin' ? '👨‍💼' : userRole === 'operator' ? '🧑‍💼' : '👤'}
                     </span>
                     <span className="truncate">{userName}</span>
                   </p>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
-                    userRole === 'admin' ? 'bg-red-500/30 text-red-100' :
-                    userRole === 'operator' ? 'bg-blue-500/30 text-blue-100' :
-                    'bg-green-500/30 text-green-100'
+                    userRole === 'admin' ? 'bg-red-500/30 text-red-200' :
+                    userRole === 'operator' ? 'bg-blue-500/30 text-blue-200' :
+                    'bg-green-500/30 text-green-200'
                   }`}>
                     {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
                   </span>
@@ -164,8 +189,8 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
       </aside>
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 flex flex-col min-h-screen min-w-0">
-        <header className="bg-amber-50/80 backdrop-blur-xl shadow-sm border-b border-amber-200/50 px-4 py-3 flex items-center justify-between sticky top-0 z-30 print:hidden">
+      <div className="flex-1 flex flex-col min-h-screen min-w-0 relative z-10">
+        <header className="bg-white/70 backdrop-blur-xl shadow-sm border-b border-amber-200/50 px-4 py-3 flex items-center justify-between sticky top-0 z-30 print:hidden">
           <div className="flex items-center gap-3">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-xl hover:bg-amber-100 transition-colors">
               <svg className="w-5 h-5 text-amber-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +198,7 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
               </svg>
             </button>
 
-            <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-amber-100 to-orange-100 rounded-xl border border-amber-200">
+            <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-white/60 backdrop-blur-sm rounded-xl border border-amber-200">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
@@ -227,7 +252,7 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
           {children}
         </main>
 
-        <footer className="bg-amber-50/50 border-t border-amber-200/50 px-4 py-3 text-center print:hidden">
+        <footer className="bg-white/50 backdrop-blur-sm border-t border-amber-200/50 px-4 py-3 text-center print:hidden">
           <p className="text-xs text-amber-800">
             © 2026 <span className="font-semibold">{appSettings.nama_aplikasi} - {appSettings.nama_instansi}</span>
           </p>
@@ -235,13 +260,4 @@ export default function Layout({ auth, currentPage, onNavigate, onLogout, childr
       </div>
     </div>
   );
-}
-
-function adjustColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-  const amt = Math.round(2.55 * percent);
-  const R = Math.max(0, Math.min(255, (num >> 16) + amt));
-  const G = Math.max(0, Math.min(255, ((num >> 8) & 0x00ff) + amt));
-  const B = Math.max(0, Math.min(255, (num & 0x0000ff) + amt));
-  return `#${(0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1)}`;
 }

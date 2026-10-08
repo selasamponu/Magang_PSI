@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { SuratMasukDB, SuratKeluarDB, WargaDB, UserDB, LogDB } from '../store/db';
+import { useState, useEffect, useRef } from 'react';
+import { SuratMasukDB, SuratKeluarDB, WargaDB, UserDB, LogDB, SettingsDB } from '../store/db';
 import { SuratMasuk, SuratKeluar, Warga, User, LogAktivitas } from '../types';
 
 interface Props {
@@ -11,6 +11,7 @@ type LaporanType = 'surat-masuk' | 'surat-keluar' | 'warga' | 'user' | 'log';
 export default function LaporanPage({ currentUser }: Props) {
   const [activeTab, setActiveTab] = useState<LaporanType>('surat-masuk');
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
 
   const [suratMasukList, setSuratMasukList] = useState<SuratMasuk[]>([]);
   const [suratKeluarList, setSuratKeluarList] = useState<SuratKeluar[]>([]);
@@ -27,17 +28,11 @@ export default function LaporanPage({ currentUser }: Props) {
   const [tanggalSampai, setTanggalSampai] = useState(today);
   const [filterStatus, setFilterStatus] = useState('');
 
-  const [ttd, setTtd] = useState({
-    jabatan: 'Kepala Kemantren Tegalrejo',
-    nama: '',
-    nip: '',
-    kota: 'Yogyakarta',
-  });
+  const pdfAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadLogo = async () => {
       try {
-        const { SettingsDB } = await import('../store/db');
         const data = await SettingsDB.get();
         if (data?.logo_url) {
           const fullUrl = data.logo_url.startsWith('/uploads/')
@@ -51,24 +46,6 @@ export default function LaporanPage({ currentUser }: Props) {
     };
     loadLogo();
   }, []);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('laporan_ttd');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setTtd(parsed);
-      } catch (e) {
-        console.error(e);
-      }
-    } else {
-      setTtd((prev) => ({ ...prev, nama: currentUser.nama }));
-    }
-  }, [currentUser.nama]);
-
-  useEffect(() => {
-    localStorage.setItem('laporan_ttd', JSON.stringify(ttd));
-  }, [ttd]);
 
   const refresh = async () => {
     try {
@@ -128,10 +105,6 @@ export default function LaporanPage({ currentUser }: Props) {
   );
   const filteredLog = filterByDate(logList);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const getTitle = () => {
     switch (activeTab) {
       case 'surat-masuk': return 'Laporan Surat Masuk';
@@ -142,24 +115,137 @@ export default function LaporanPage({ currentUser }: Props) {
     }
   };
 
-  const getTotalData = () => {
+  const getFileName = () => {
+    const dateStr = new Date().toISOString().split('T')[0];
     switch (activeTab) {
-      case 'surat-masuk': return filteredSuratMasuk.length;
-      case 'surat-keluar': return filteredSuratKeluar.length;
-      case 'warga': return wargaList.length;
-      case 'user': return userList.length;
-      case 'log': return filteredLog.length;
+      case 'surat-masuk': return `Laporan_Surat_Masuk_${dateStr}.pdf`;
+      case 'surat-keluar': return `Laporan_Surat_Keluar_${dateStr}.pdf`;
+      case 'warga': return `Laporan_Data_Warga_${dateStr}.pdf`;
+      case 'user': return `Laporan_Data_User_${dateStr}.pdf`;
+      case 'log': return `Laporan_Log_Aktivitas_${dateStr}.pdf`;
+    }
+  };
+
+  // ================================================================
+  // GENERATE PDF
+  // ================================================================
+  const handleDownloadPDF = async () => {
+    if (!pdfAreaRef.current) {
+      alert('Area PDF tidak ditemukan');
+      return;
+    }
+
+    setGenerating(true);
+
+    try {
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+
+      const element = pdfAreaRef.current;
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: element.scrollWidth,
+        windowHeight: element.scrollHeight,
+      });
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const marginX = 8;
+      const marginY = 10;
+
+      const contentWidth = pageWidth - marginX * 2;
+      const contentHeight = pageHeight - marginY * 2;
+
+      const imgRatio = imgWidth / imgHeight;
+      const pageRatio = contentWidth / contentHeight;
+
+      let renderWidth: number;
+      let renderHeight: number;
+
+      if (imgRatio > pageRatio) {
+        renderWidth = contentWidth;
+        renderHeight = contentWidth / imgRatio;
+      } else {
+        renderHeight = contentHeight;
+        renderWidth = contentHeight * imgRatio;
+      }
+
+      const totalHeightNeeded = (imgHeight / imgWidth) * renderWidth;
+
+      if (totalHeightNeeded <= contentHeight) {
+        pdf.addImage(imgData, 'JPEG', marginX, marginY, renderWidth, renderHeight);
+      } else {
+        const pageCanvasHeight = (contentHeight / contentWidth) * imgWidth;
+        let yOffset = 0;
+        let pageNum = 0;
+
+        while (yOffset < imgHeight) {
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = imgWidth;
+          pageCanvas.height = Math.min(pageCanvasHeight, imgHeight - yOffset);
+
+          const ctx = pageCanvas.getContext('2d');
+          if (ctx) {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            ctx.drawImage(
+              canvas,
+              0,
+              yOffset,
+              imgWidth,
+              pageCanvas.height,
+              0,
+              0,
+              imgWidth,
+              pageCanvas.height
+            );
+
+            const pageImgData = pageCanvas.toDataURL('image/jpeg', 0.95);
+            const pageRenderHeight = (pageCanvas.height / pageCanvas.width) * contentWidth;
+
+            if (pageNum > 0) pdf.addPage();
+
+            pdf.addImage(pageImgData, 'JPEG', marginX, marginY, contentWidth, pageRenderHeight);
+          }
+
+          yOffset += pageCanvas.height;
+          pageNum++;
+        }
+      }
+
+      const fileName = getFileName();
+      pdf.save(fileName || 'laporan.pdf');
+    } catch (err: any) {
+      console.error('❌ Gagal generate PDF:', err);
+      alert('Gagal membuat PDF: ' + (err.message || 'Unknown error'));
+    } finally {
+      setGenerating(false);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       {/* HEADER */}
       <div className="print:hidden">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold gradient-text">📊 Laporan</h1>
-            <p className="text-sm text-gray-500 mt-1">Cetak & export laporan sistem</p>
+            <p className="text-sm text-gray-500 mt-1">Cetak & download laporan dalam format PDF</p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
             <button
@@ -173,68 +259,27 @@ export default function LaporanPage({ currentUser }: Props) {
               Refresh
             </button>
             <button
-              onClick={handlePrint}
-              className="flex-1 sm:flex-none px-5 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
+              onClick={handleDownloadPDF}
+              disabled={generating}
+              className="flex-1 sm:flex-none px-5 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl text-sm font-semibold hover:opacity-90 transition-all shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              🖨️ Cetak Laporan
+              {generating ? (
+                <>
+                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Membuat PDF...
+                </>
+              ) : (
+                <>📥 Download PDF</>
+              )}
             </button>
           </div>
         </div>
 
-        {/* FORM TANDA TANGAN */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 mt-6">
-          <h3 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-            ✍️ Pengaturan Tanda Tangan
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Jabatan</label>
-              <input
-                type="text"
-                value={ttd.jabatan}
-                onChange={(e) => setTtd({ ...ttd, jabatan: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="Kepala Kemantren Tegalrejo"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nama Penandatangan</label>
-              <input
-                type="text"
-                value={ttd.nama}
-                onChange={(e) => setTtd({ ...ttd, nama: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="Masukkan nama"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">NIP</label>
-              <input
-                type="text"
-                value={ttd.nip}
-                onChange={(e) => setTtd({ ...ttd, nip: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="NIP. 123456789"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Kota</label>
-              <input
-                type="text"
-                value={ttd.kota}
-                onChange={(e) => setTtd({ ...ttd, kota: e.target.value })}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="Yogyakarta"
-              />
-            </div>
-          </div>
-          <p className="text-xs text-blue-600 mt-2">
-            💡 Nama ini akan tampil di tanda tangan laporan. Otomatis tersimpan di browser.
-          </p>
-        </div>
-
         {/* Tab Navigation */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-2 mt-4">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-2 mt-5">
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
             <button
               onClick={() => { setActiveTab('surat-masuk'); setFilterStatus(''); }}
@@ -344,306 +389,311 @@ export default function LaporanPage({ currentUser }: Props) {
         )}
       </div>
 
-      {/* AREA CETAK */}
-      <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 print:shadow-none print:border-0 print:rounded-none print:p-0">
-
-        {/* ============================================================
-            KOP SURAT — logo + teks di TENGAH, teks rata tengah
-            Diberikan padding bottom yang lebih besar agar tidak berdempetan
-        ============================================================ */}
-        <div className="hidden print:block border-b-2 border-gray-800 pb-4 mb-6">
-          <div
+      {/* ================================================================ */}
+      {/* AREA PDF — HANYA ini yang di-capture html2canvas                  */}
+      {/* ================================================================ */}
+      <div
+        ref={pdfAreaRef}
+        style={{
+          width: '794px',
+          minHeight: '1123px',
+          padding: '40px 45px',
+          background: '#ffffff',
+          color: '#000000',
+          fontFamily: 'Arial, Helvetica, sans-serif',
+          fontSize: '11px',
+          lineHeight: '1.5',
+          margin: '0 auto',
+          boxSizing: 'border-box',
+          position: 'relative',
+        }}
+      >
+        {/* KOP SURAT */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '20px',
+          borderBottom: '3px double #000',
+          paddingBottom: '14px',
+          marginBottom: '20px',
+        }}>
+          <img
+            src={logoUrl}
+            alt="Logo"
+            crossOrigin="anonymous"
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '15px', // Jarak antara logo dan teks
+              width: '80px',
+              height: '80px',
+              objectFit: 'contain',
+              display: 'block',
+              flexShrink: 0,
             }}
-          >
-            {/* LOGO */}
-            <div style={{ flexShrink: 0 }}>
-              <img
-                src={logoUrl}
-                alt="Logo"
-                style={{
-                  width: '70px', // Sedikit diperbesar
-                  height: '70px',
-                  objectFit: 'contain',
-                  display: 'block',
-                }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/logo.png';
-                }}
-              />
-            </div>
-
-            {/* TEKS KOP — RATA TENGAH */}
-            <div style={{ textAlign: 'center', lineHeight: '1.4' }}> {/* Line height ditambah */}
-              <h2 style={{ fontSize: '13px', fontWeight: 'bold', textTransform: 'uppercase', margin: 0, color: '#000' }}>
-                PEMERINTAH KOTA YOGYAKARTA
-              </h2>
-              <h1 style={{ fontSize: '18px', fontWeight: 'bold', textTransform: 'uppercase', margin: '3px 0 0 0', color: '#000' }}>
-                KEMANTREN TEGALREJO
-              </h1>
-              <p style={{ fontSize: '12px', fontWeight: 'bold', margin: '4px 0 0 0', color: '#000' }}>
-                ꦏꦼꦩꦤ꧀ꦠꦿꦺꦤ꧀ ꦠꦼꦒꦭꦿꦺꦗꦺꦴ
-              </p>
-              <p style={{ fontSize: '9px', margin: '5px 0 0 0', color: '#000' }}>
-                Jalan Tompeyan TR III/219, Yogyakarta 55244 | Telp (0274) 515781
-              </p>
-              <p style={{ fontSize: '8px', margin: '2px 0 0 0', color: '#000' }}>
-                Laman tegalrejokec.jogjakota.go.id | Pos-el tr@jogjakota.go.id
-              </p>
-            </div>
+            onError={(e) => { (e.target as HTMLImageElement).src = '/logo.png'; }}
+          />
+          <div style={{ textAlign: 'center', lineHeight: '1.4' }}>
+            <p style={{ fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase', margin: 0, letterSpacing: '0.8px' }}>
+              PEMERINTAH KOTA YOGYAKARTA
+            </p>
+            <p style={{ fontSize: '20px', fontWeight: 'bold', textTransform: 'uppercase', margin: '4px 0 0 0', letterSpacing: '1.2px' }}>
+              KEMANTREN TEGALREJO
+            </p>
+            <p style={{ fontSize: '13px', fontWeight: 'bold', margin: '5px 0 0 0' }}>
+              ꦏꦼꦩꦤ꧀ꦠꦿꦺꦤ꧀ ꦠꦼꦒꦭꦿꦺꦗꦺꦴ
+            </p>
+            <p style={{ fontSize: '10px', margin: '6px 0 0 0' }}>
+              Jalan Tompeyan TR III/219, Yogyakarta 55244 | Telp (0274) 515781
+            </p>
+            <p style={{ fontSize: '9px', margin: '3px 0 0 0' }}>
+              Laman tegalrejokec.jogjakota.go.id | Pos-el tr@jogjakota.go.id
+            </p>
           </div>
         </div>
 
-        {/* JUDUL LAPORAN — Diberikan margin bottom lebih */}
-        <div className="hidden print:block text-center mb-6">
-          <h1 className="text-lg font-bold uppercase underline">{getTitle()}</h1>
-          <p className="text-[11px] mt-2">
+        {/* JUDUL LAPORAN */}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <h1 style={{
+            fontSize: '16px',
+            fontWeight: 'bold',
+            textTransform: 'uppercase',
+            textDecoration: 'underline',
+            margin: 0,
+            letterSpacing: '0.5px',
+          }}>
+            {getTitle()}
+          </h1>
+          <p style={{ fontSize: '11px', marginTop: '8px', marginBottom: 0 }}>
             Periode: {new Date(tanggalDari).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
             {' '}s/d{' '}
             {new Date(tanggalSampai).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}
           </p>
-          {filterStatus && <p className="text-[11px] mt-1">Status: {filterStatus}</p>}
+          {filterStatus && (
+            <p style={{ fontSize: '11px', marginTop: '4px', marginBottom: 0 }}>
+              Status: <strong>{filterStatus}</strong>
+            </p>
+          )}
         </div>
 
-        {/* INFO */}
-        <div className="print:hidden mb-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Laporan Aktif</p>
-              <p className="text-lg font-bold text-gray-800 mt-0.5">{getTitle()}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total Data</p>
-              <p className="text-3xl font-bold text-purple-600 mt-0.5">{getTotalData()}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* TABEL SURAT MASUK */}
+        {/* ============= TABEL SURAT MASUK ============= */}
         {activeTab === 'surat-masuk' && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse" style={{ fontSize: '9px' }}>
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">No</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">ID Surat</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Pengirim</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">NIK</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Kategori</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Perihal</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Status</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Tanggal</th>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '4%' }}>No</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '14%' }}>ID Surat</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '14%' }}>Pengirim</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '14%' }}>NIK</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '12%' }}>Kategori</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '18%' }}>Perihal</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '11%' }}>Status</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '13%' }}>Tanggal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSuratMasuk.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ border: '1px solid #333', padding: '20px', textAlign: 'center', color: '#999' }}>
+                    Tidak ada data
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredSuratMasuk.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-3 text-gray-400">Tidak ada data</td>
+              ) : (
+                filteredSuratMasuk.map((s, idx) => (
+                  <tr key={s.id_surat}>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', textAlign: 'center' }}>{idx + 1}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '9px', fontFamily: 'monospace' }}>{s.id_surat}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{s.nama_pengirim}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '9px', fontFamily: 'monospace' }}>{s.nik_pengirim}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{s.kategori}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{s.perihal}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', textAlign: 'center', textTransform: 'capitalize' }}>{s.status}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', whiteSpace: 'nowrap' }}>
+                      {new Date(s.tanggal_kirim).toLocaleDateString('id-ID')}
+                    </td>
                   </tr>
-                ) : (
-                  filteredSuratMasuk.slice(0, 15).map((s, idx) => (
-                    <tr key={s.id_surat} className="hover:bg-gray-50">
-                      <td className="border border-gray-400 px-1 py-0.5">{idx + 1}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 font-mono">{s.id_surat}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{s.nama_pengirim}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 font-mono">{s.nik_pengirim}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{s.kategori}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{s.perihal}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 capitalize">{s.status}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 whitespace-nowrap">
-                        {new Date(s.tanggal_kirim).toLocaleDateString('id-ID')}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         )}
 
-        {/* TABEL SURAT KELUAR */}
+        {/* ============= TABEL SURAT KELUAR ============= */}
         {activeTab === 'surat-keluar' && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse" style={{ fontSize: '9px' }}>
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">No</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">ID Surat</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Penerima</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">NIK</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Nomor Surat</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Perihal</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Status</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Tanggal</th>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '4%' }}>No</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '14%' }}>ID Surat</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '14%' }}>Penerima</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '14%' }}>NIK</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '12%' }}>Nomor</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '18%' }}>Perihal</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '11%' }}>Status</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '13%' }}>Tanggal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredSuratKeluar.length === 0 ? (
+                <tr>
+                  <td colSpan={8} style={{ border: '1px solid #333', padding: '20px', textAlign: 'center', color: '#999' }}>
+                    Tidak ada data
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredSuratKeluar.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="text-center py-3 text-gray-400">Tidak ada data</td>
+              ) : (
+                filteredSuratKeluar.map((s, idx) => (
+                  <tr key={s.id_surat_keluar}>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', textAlign: 'center' }}>{idx + 1}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '9px', fontFamily: 'monospace' }}>{s.id_surat_keluar}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{s.nama_penerima}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '9px', fontFamily: 'monospace' }}>{s.nik_penerima}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '9px', fontFamily: 'monospace' }}>{s.nomor_surat}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{s.perihal}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', textAlign: 'center', textTransform: 'capitalize' }}>{s.status}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', whiteSpace: 'nowrap' }}>
+                      {new Date(s.tanggal_kirim).toLocaleDateString('id-ID')}
+                    </td>
                   </tr>
-                ) : (
-                  filteredSuratKeluar.slice(0, 15).map((s, idx) => (
-                    <tr key={s.id_surat_keluar} className="hover:bg-gray-50">
-                      <td className="border border-gray-400 px-1 py-0.5">{idx + 1}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 font-mono">{s.id_surat_keluar}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{s.nama_penerima}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 font-mono">{s.nik_penerima}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 font-mono">{s.nomor_surat}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{s.perihal}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 capitalize">{s.status}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 whitespace-nowrap">
-                        {new Date(s.tanggal_kirim).toLocaleDateString('id-ID')}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         )}
 
-        {/* TABEL WARGA */}
+        {/* ============= TABEL WARGA ============= */}
         {activeTab === 'warga' && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse" style={{ fontSize: '9px' }}>
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">No</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">NIK</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Nama Lengkap</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Alamat</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">RT/RW</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">No HP</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Status</th>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '5%' }}>No</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '16%' }}>NIK</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '20%' }}>Nama Lengkap</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '24%' }}>Alamat</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '8%' }}>RT/RW</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '15%' }}>No HP</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '12%' }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {wargaList.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ border: '1px solid #333', padding: '20px', textAlign: 'center', color: '#999' }}>
+                    Tidak ada data
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {wargaList.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-3 text-gray-400">Tidak ada data</td>
+              ) : (
+                wargaList.map((w, idx) => (
+                  <tr key={w.nik}>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', textAlign: 'center' }}>{idx + 1}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '9px', fontFamily: 'monospace' }}>{w.nik}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{w.nama_lengkap}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{w.alamat}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', textAlign: 'center' }}>{w.rt}/{w.rw}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{w.no_hp}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', textAlign: 'center', textTransform: 'capitalize' }}>{w.status}</td>
                   </tr>
-                ) : (
-                  wargaList.slice(0, 15).map((w, idx) => (
-                    <tr key={w.nik} className="hover:bg-gray-50">
-                      <td className="border border-gray-400 px-1 py-0.5">{idx + 1}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 font-mono">{w.nik}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{w.nama_lengkap}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{w.alamat}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{w.rt}/{w.rw}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{w.no_hp}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 capitalize">{w.status}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         )}
 
-        {/* TABEL USER */}
+        {/* ============= TABEL USER ============= */}
         {activeTab === 'user' && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse" style={{ fontSize: '9px' }}>
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">No</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">ID</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Nama</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Username</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Role</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Status</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Tgl Daftar</th>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '5%' }}>No</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '8%' }}>ID</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '22%' }}>Nama</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '20%' }}>Username</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '15%' }}>Role</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '12%' }}>Status</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '18%' }}>Tgl Daftar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {userList.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ border: '1px solid #333', padding: '20px', textAlign: 'center', color: '#999' }}>
+                    Tidak ada data
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {userList.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="text-center py-3 text-gray-400">Tidak ada data</td>
+              ) : (
+                userList.map((u, idx) => (
+                  <tr key={u.id}>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', textAlign: 'center' }}>{idx + 1}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '9px', fontFamily: 'monospace', textAlign: 'center' }}>#{u.id}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{u.nama}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '9px', fontFamily: 'monospace' }}>{u.username}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', textAlign: 'center', textTransform: 'capitalize' }}>{u.role}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', textAlign: 'center', textTransform: 'capitalize' }}>{u.status}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', whiteSpace: 'nowrap' }}>
+                      {u.tanggal_daftar ? new Date(u.tanggal_daftar).toLocaleDateString('id-ID') : '-'}
+                    </td>
                   </tr>
-                ) : (
-                  userList.slice(0, 15).map((u, idx) => (
-                    <tr key={u.id} className="hover:bg-gray-50">
-                      <td className="border border-gray-400 px-1 py-0.5">{idx + 1}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 font-mono">#{u.id}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{u.nama}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 font-mono">{u.username}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 capitalize">{u.role}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 capitalize">{u.status}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 whitespace-nowrap">
-                        {u.tanggal_daftar ? new Date(u.tanggal_daftar).toLocaleDateString('id-ID') : '-'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         )}
 
-        {/* TABEL LOG */}
+        {/* ============= TABEL LOG ============= */}
         {activeTab === 'log' && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse" style={{ fontSize: '9px' }}>
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">No</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Waktu</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">User</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Aktivitas</th>
-                  <th className="border border-gray-400 px-1 py-1 text-left font-bold">Detail</th>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '5%' }}>No</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '20%' }}>Waktu</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '18%' }}>User</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '17%' }}>Aktivitas</th>
+                <th style={{ border: '1px solid #333', padding: '8px 6px', background: '#e5e7eb', fontWeight: 'bold', fontSize: '10px', textAlign: 'center', width: '40%' }}>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLog.length === 0 ? (
+                <tr>
+                  <td colSpan={5} style={{ border: '1px solid #333', padding: '20px', textAlign: 'center', color: '#999' }}>
+                    Tidak ada data
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {filteredLog.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-3 text-gray-400">Tidak ada data</td>
+              ) : (
+                filteredLog.map((l, idx) => (
+                  <tr key={l.id_log}>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', textAlign: 'center' }}>{idx + 1}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px', whiteSpace: 'nowrap' }}>
+                      {new Date(l.tanggal_waktu).toLocaleString('id-ID', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{l.nama_user}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{l.aktivitas}</td>
+                    <td style={{ border: '1px solid #333', padding: '8px 6px', fontSize: '10px' }}>{l.detail}</td>
                   </tr>
-                ) : (
-                  filteredLog.slice(0, 15).map((l, idx) => (
-                    <tr key={l.id_log} className="hover:bg-gray-50">
-                      <td className="border border-gray-400 px-1 py-0.5">{idx + 1}</td>
-                      <td className="border border-gray-400 px-1 py-0.5 whitespace-nowrap">
-                        {new Date(l.tanggal_waktu).toLocaleString('id-ID', {
-                          day: '2-digit', month: '2-digit', year: 'numeric',
-                          hour: '2-digit', minute: '2-digit',
-                        })}
-                      </td>
-                      <td className="border border-gray-400 px-1 py-0.5">{l.nama_user}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{l.aktivitas}</td>
-                      <td className="border border-gray-400 px-1 py-0.5">{l.detail}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         )}
 
-        {/* TANDA TANGAN — Diberikan margin top yang lebih besar */}
-        <div className="hidden print:block mt-10">
-          <div className="flex justify-end">
-            <div className="text-center" style={{ fontSize: '11px', lineHeight: '1.6' }}>
-              <p>
-                {ttd.kota}, {new Date().toLocaleDateString('id-ID', {
-                  day: '2-digit', month: 'long', year: 'numeric'
-                })}
-              </p>
-              <p className="mt-1">{ttd.jabatan}</p>
-              <div className="h-12"></div> {/* Ruang untuk tanda tangan */}
-              <p className="font-bold underline">{ttd.nama || currentUser.nama}</p>
-              <p className="text-[10px] mt-0.5">{ttd.nip || 'NIP. ............................'}</p>
-            </div>
+        {/* TANDA TANGAN */}
+        <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ textAlign: 'center', fontSize: '11px', lineHeight: '1.7' }}>
+            <p style={{ margin: 0 }}>
+              Yogyakarta, {new Date().toLocaleDateString('id-ID', {
+                day: '2-digit', month: 'long', year: 'numeric'
+              })}
+            </p>
           </div>
         </div>
 
-        {/* FOOTER — Diberikan margin top */}
-        <div className="hidden print:block mt-6 pt-2 border-t border-gray-300 text-center">
-          <p className="text-[8px] text-gray-500">
+        {/* FOOTER */}
+        <div style={{
+          marginTop: '30px',
+          paddingTop: '10px',
+          borderTop: '1px solid #666',
+          textAlign: 'center',
+        }}>
+          <p style={{ fontSize: '9px', color: '#666', margin: 0 }}>
             Surat Kemantren Tegalrejo Yogyakarta — {new Date().toLocaleString('id-ID')}
           </p>
         </div>

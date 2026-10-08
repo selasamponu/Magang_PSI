@@ -9,41 +9,65 @@ import App from "./App.tsx";
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js')
+      .register('/sw.js', { scope: '/' })
       .then((registration) => {
         console.log('✅ Service Worker registered:', registration.scope);
+
+        // Cek update setiap 1 jam
+        setInterval(() => {
+          registration.update();
+        }, 60 * 60 * 1000);
       })
       .catch((error) => {
         console.error('❌ Service Worker registration failed:', error);
       });
   });
+
+  // Auto reload saat SW baru aktif (biar user dapat versi terbaru)
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    window.location.reload();
+  });
 }
 
 // ================================================================
-// LOAD LOGO & FAVICON DINAMIS DARI DATABASE
+// LOAD LOGO, FAVICON, TITLE DINAMIS
 // ================================================================
 async function loadAppSettings() {
   try {
-    const API_URL = `http://${window.location.hostname}:5000/api`;
+    const PROTOCOL = window.location.protocol;
+    const HOSTNAME = window.location.hostname;
+    const isProd = import.meta.env.PROD;
+
+    const API_URL = isProd
+      ? `${PROTOCOL}//${HOSTNAME}/api`
+      : `${PROTOCOL}//${HOSTNAME}:5000/api`;
+
+    const FILE_BASE = isProd
+      ? `${PROTOCOL}//${HOSTNAME}`
+      : `${PROTOCOL}//${HOSTNAME}:5000`;
+
     const res = await fetch(`${API_URL}/pengaturan`);
     const result = await res.json();
 
     if (result.success && result.data) {
       const data = result.data;
 
-      // 1. Update Title
+      // 1. Title
       if (data.nama_aplikasi && data.nama_instansi) {
         document.title = `${data.nama_aplikasi} - ${data.nama_instansi}`;
       }
 
-      // 2. Update Favicon
+      // 2. Logo URL
       const logoUrl = data.logo_url
         ? (data.logo_url.startsWith('/uploads/')
-            ? `http://${window.location.hostname}:5000${data.logo_url}`
+            ? `${FILE_BASE}${data.logo_url}`
             : data.logo_url)
         : '/logo.png';
 
-      // Update favicon
+      // 3. Favicon
       let favicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
       if (!favicon) {
         favicon = document.createElement('link');
@@ -52,7 +76,7 @@ async function loadAppSettings() {
       }
       favicon.href = logoUrl;
 
-      // Update apple-touch-icon
+      // 4. Apple touch icon
       let appleIcon = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement;
       if (!appleIcon) {
         appleIcon = document.createElement('link');
@@ -61,17 +85,24 @@ async function loadAppSettings() {
       }
       appleIcon.href = logoUrl;
 
-      console.log('✅ App settings loaded:', {
-        name: data.nama_aplikasi,
-        logo: logoUrl,
-      });
+      // 5. Theme color dinamis
+      if (data.warna_tema) {
+        let themeMeta = document.querySelector("meta[name='theme-color']") as HTMLMetaElement;
+        if (!themeMeta) {
+          themeMeta = document.createElement('meta');
+          themeMeta.name = 'theme-color';
+          document.head.appendChild(themeMeta);
+        }
+        themeMeta.content = data.warna_tema;
+      }
+
+      console.log('✅ App settings loaded:', { name: data.nama_aplikasi, logo: logoUrl });
     }
   } catch (err) {
     console.error('❌ Error loading app settings:', err);
   }
 }
 
-// Load settings sebelum render
 loadAppSettings();
 
 // ================================================================

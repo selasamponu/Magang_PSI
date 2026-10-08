@@ -1,5 +1,14 @@
 // src/api/suratApi.ts
-const API_URL = `http://${window.location.hostname}:5000/api`;
+
+// ================================================================
+// KONFIGURASI API
+// Semua request lewat path relatif '/api'
+// - Di development: Vite proxy meneruskan ke localhost:5000
+// - Di ngrok: Vite proxy juga yang meneruskan
+// - Di production (VPS): Nginx yang meneruskan ke localhost:5000
+// ================================================================
+const API_URL = '/api';
+export const FILE_BASE_URL = '';
 
 async function fetchApi(endpoint: string, options: RequestInit = {}) {
   const res = await fetch(`${API_URL}${endpoint}`, {
@@ -10,10 +19,15 @@ async function fetchApi(endpoint: string, options: RequestInit = {}) {
     ...options,
   });
 
-  const data = await res.json();
+  let data: any;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`Server error (${res.status})`);
+  }
 
   if (!res.ok) {
-    throw new Error(data.error || data.message || 'Terjadi kesalahan');
+    throw new Error(data.error || data.message || `HTTP ${res.status}`);
   }
 
   return data;
@@ -25,10 +39,15 @@ async function fetchFormData(endpoint: string, formData: FormData, method = 'POS
     body: formData,
   });
 
-  const data = await res.json();
+  let data: any;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error(`Server error (${res.status})`);
+  }
 
   if (!res.ok) {
-    throw new Error(data.error || data.message || 'Terjadi kesalahan');
+    throw new Error(data.error || data.message || `HTTP ${res.status}`);
   }
 
   return data;
@@ -44,7 +63,6 @@ export const authApi = {
       body: JSON.stringify({ username, password }),
     });
   },
-
   register: async (data: any) => {
     return fetchApi('/register', {
       method: 'POST',
@@ -61,27 +79,24 @@ export const suratMasukApi = {
     const res = await fetchApi('/surat-masuk');
     return res.data || [];
   },
-
   create: async (data: any, file: File) => {
     const formData = new FormData();
     Object.keys(data).forEach((key) => {
-      formData.append(key, data[key]);
+      if (data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
     });
     formData.append('file', file);
     return fetchFormData('/surat-masuk', formData);
   },
-
   updateStatus: async (id: string, status: string, extra?: any) => {
     return fetchApi(`/surat-masuk/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status, ...extra }),
     });
   },
-
   delete: async (id: string) => {
-    return fetchApi(`/surat-masuk/${id}`, {
-      method: 'DELETE',
-    });
+    return fetchApi(`/surat-masuk/${id}`, { method: 'DELETE' });
   },
 };
 
@@ -93,16 +108,16 @@ export const suratKeluarApi = {
     const res = await fetchApi('/surat-keluar');
     return res.data || [];
   },
-
   create: async (data: any, file: File) => {
     const formData = new FormData();
     Object.keys(data).forEach((key) => {
-      formData.append(key, data[key]);
+      if (data[key] !== null && data[key] !== undefined) {
+        formData.append(key, data[key]);
+      }
     });
     formData.append('file', file);
     return fetchFormData('/surat-keluar', formData);
   },
-
   update: async (id: string, data: any, file?: File) => {
     const formData = new FormData();
     Object.keys(data).forEach((key) => {
@@ -110,23 +125,17 @@ export const suratKeluarApi = {
         formData.append(key, data[key]);
       }
     });
-    if (file) {
-      formData.append('file', file);
-    }
+    if (file) formData.append('file', file);
     return fetchFormData(`/surat-keluar/${id}`, formData, 'PUT');
   },
-
   updateStatus: async (id: string, status: string) => {
     return fetchApi(`/surat-keluar/${id}/status`, {
       method: 'PUT',
       body: JSON.stringify({ status }),
     });
   },
-
   delete: async (id: string) => {
-    return fetchApi(`/surat-keluar/${id}`, {
-      method: 'DELETE',
-    });
+    return fetchApi(`/surat-keluar/${id}`, { method: 'DELETE' });
   },
 };
 
@@ -138,7 +147,6 @@ export const pengaturanApi = {
     const res = await fetchApi('/pengaturan');
     return res.data;
   },
-
   update: async (data: any, file?: File) => {
     const formData = new FormData();
     Object.keys(data).forEach((key) => {
@@ -146,9 +154,7 @@ export const pengaturanApi = {
         formData.append(key, data[key]);
       }
     });
-    if (file) {
-      formData.append('logo_file', file);
-    }
+    if (file) formData.append('logo_file', file);
     return fetchFormData('/pengaturan', formData, 'PUT');
   },
 };
@@ -161,25 +167,14 @@ export const wargaApi = {
     const res = await fetchApi('/warga');
     return res.data || [];
   },
-
   create: async (data: any) => {
-    return fetchApi('/warga', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    return fetchApi('/warga', { method: 'POST', body: JSON.stringify(data) });
   },
-
   update: async (nik: string, data: any) => {
-    return fetchApi(`/warga/${nik}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
+    return fetchApi(`/warga/${nik}`, { method: 'PUT', body: JSON.stringify(data) });
   },
-
   delete: async (nik: string) => {
-    return fetchApi(`/warga/${nik}`, {
-      method: 'DELETE',
-    });
+    return fetchApi(`/warga/${nik}`, { method: 'DELETE' });
   },
 };
 
@@ -191,25 +186,14 @@ export const usersApi = {
     const res = await fetchApi('/users');
     return res.data || [];
   },
-
   create: async (data: any) => {
-    return fetchApi('/users', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    return fetchApi('/users', { method: 'POST', body: JSON.stringify(data) });
   },
-
   update: async (id: number, data: any) => {
-    return fetchApi(`/users/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
+    return fetchApi(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) });
   },
-
   delete: async (id: number) => {
-    return fetchApi(`/users/${id}`, {
-      method: 'DELETE',
-    });
+    return fetchApi(`/users/${id}`, { method: 'DELETE' });
   },
 };
 
@@ -224,19 +208,15 @@ export const kategoriApi = {
 };
 
 // ================================================================
-// LOG AKTIVITAS
+// LOG
 // ================================================================
 export const logApi = {
   getAll: async () => {
     const res = await fetchApi('/logs');
     return res.data || [];
   },
-
   create: async (data: any) => {
-    return fetchApi('/logs', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
+    return fetchApi('/logs', { method: 'POST', body: JSON.stringify(data) });
   },
 };
 

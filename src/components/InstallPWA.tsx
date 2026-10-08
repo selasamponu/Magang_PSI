@@ -15,6 +15,9 @@ export default function InstallPWA() {
   const [appName, setAppName] = useState('Aplikasi Surat');
   const [appInstansi, setAppInstansi] = useState('Kemantren Tegalrejo');
 
+  // ============================================================
+  // LOAD SETTINGS (logo, nama aplikasi, instansi)
+  // ============================================================
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -32,93 +35,148 @@ export default function InstallPWA() {
           if (data.nama_instansi) setAppInstansi(data.nama_instansi);
         }
       } catch (err) {
-        console.error(err);
+        console.error('[InstallPWA] Error load settings:', err);
       }
     };
     loadSettings();
   }, []);
 
+  // ============================================================
+  // DETEKSI INSTALL & SETUP EVENT LISTENER
+  // ============================================================
   useEffect(() => {
+    // --- Deteksi apakah sudah terinstall (standalone mode) ---
     const standalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
     const isIOSStandalone = (navigator as any).standalone === true;
 
     setIsIOS(isIOSDevice);
 
     if (standalone || isIOSStandalone) {
       setIsInstalled(true);
-      return;
+      return; // Sudah terinstall, tidak perlu lanjut
     }
 
+    // --- Cek apakah user baru saja dismiss (< 7 hari) ---
     const dismissed = localStorage.getItem('pwa-dismissed');
     if (dismissed === 'true') {
-      const dismissedTime = parseInt(localStorage.getItem('pwa-dismissed-time') || '0');
+      const dismissedTime = parseInt(localStorage.getItem('pwa-dismissed-time') || '0', 10);
       const daysSinceDismiss = (Date.now() - dismissedTime) / (1000 * 60 * 60 * 24);
       if (daysSinceDismiss < 7) {
+        console.log('[InstallPWA] User dismiss < 7 hari, skip banner');
         return;
       }
     }
 
-    const handler = (e: Event) => {
+    // --- Handler: beforeinstallprompt (Chrome/Edge Android & Desktop) ---
+    const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      console.log('[InstallPWA] beforeinstallprompt fired');
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+
+      // Tampilkan banner setelah 3 detik
       setTimeout(() => setShowBanner(true), 3000);
     };
 
-    window.addEventListener('beforeinstallprompt', handler);
+    // --- Handler: appinstalled (setelah user install) ---
+    const handleAppInstalled = () => {
+      console.log('✅ PWA berhasil di-install');
+      setIsInstalled(true);
+      setShowBanner(false);
+      setDeferredPrompt(null);
+      // Bersihkan flag dismiss
+      localStorage.removeItem('pwa-dismissed');
+      localStorage.removeItem('pwa-dismissed-time');
+    };
 
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // --- iOS: tidak support beforeinstallprompt, tampilkan manual ---
     if (isIOSDevice && !isIOSStandalone) {
       setTimeout(() => setShowBanner(true), 3000);
     }
 
-    window.addEventListener('appinstalled', () => {
-      setIsInstalled(true);
-      setShowBanner(false);
-      console.log('✅ PWA berhasil di-install');
-    });
+    // --- Fallback: kalau setelah 8 detik tidak ada beforeinstallprompt, cek manual ---
+    // (untuk browser yang tidak fire event ini, seperti Firefox atau Safari desktop)
+    const fallbackTimer = setTimeout(() => {
+      // Cek lagi apakah standalone berubah
+      const stillStandalone = window.matchMedia('(display-mode: standalone)').matches;
+      if (stillStandalone) {
+        setIsInstalled(true);
+        setShowBanner(false);
+      }
+    }, 8000);
 
+    // --- Cleanup ---
     return () => {
-      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+      clearTimeout(fallbackTimer);
     };
   }, []);
 
+  // ============================================================
+  // HANDLER INSTALL
+  // ============================================================
   const handleInstall = async () => {
+    // iOS: tampilkan guide manual
     if (isIOS) {
       setShowIOSGuide(true);
       return;
     }
 
+    // Kalau tidak ada deferredPrompt (browser tidak support / sudah pernah dismiss)
     if (!deferredPrompt) {
-      alert('Browser kamu tidak mendukung install otomatis.\n\nSilakan:\n1. Buka menu browser (⋮)\n2. Pilih "Add to Home screen" atau "Install app"');
+      alert(
+        'Browser kamu tidak mendukung install otomatis.\n\n' +
+          'Silakan install manual:\n' +
+          '1. Buka menu browser (⋮ atau ⋯)\n' +
+          '2. Pilih "Add to Home screen" atau "Install app"\n' +
+          '3. Ikuti instruksi di layar'
+      );
       return;
     }
 
-    await deferredPrompt.prompt();
-    const choice = await deferredPrompt.userChoice;
+    try {
+      await deferredPrompt.prompt();
+      const choice = await deferredPrompt.userChoice;
 
-    if (choice.outcome === 'accepted') {
-      console.log('✅ User menerima install');
-      setShowBanner(false);
-    } else {
-      console.log('❌ User menolak install');
+      if (choice.outcome === 'accepted') {
+        console.log('✅ User menerima install');
+        setShowBanner(false);
+        setIsInstalled(true);
+      } else {
+        console.log('❌ User menolak install');
+      }
+    } catch (err) {
+      console.error('[InstallPWA] Install error:', err);
     }
 
     setDeferredPrompt(null);
   };
 
+  // ============================================================
+  // HANDLER DISMISS
+  // ============================================================
   const handleDismiss = () => {
     setShowBanner(false);
     localStorage.setItem('pwa-dismissed', 'true');
     localStorage.setItem('pwa-dismissed-time', Date.now().toString());
   };
 
+  // ============================================================
+  // RENDER
+  // ============================================================
   if (isInstalled || !showBanner) return null;
 
   return (
     <>
+      {/* ============ BANNER PROMPT ============ */}
       <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 sm:max-w-md z-[200] animate-in">
         <div className="bg-gradient-to-br from-[#8B3A1A] to-[#A0522D] text-white rounded-2xl shadow-2xl p-4 border border-white/20">
           <div className="flex items-start gap-3">
+            {/* Logo */}
             <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center flex-shrink-0 p-1 overflow-hidden">
               <img
                 src={logoUrl}
@@ -129,11 +187,15 @@ export default function InstallPWA() {
                 }}
               />
             </div>
+
+            {/* Content */}
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm">Install {appName}</p>
               <p className="text-xs text-white/80 mt-1">
                 Pasang aplikasi di HP kamu biar lebih cepat & mudah diakses
               </p>
+
+              {/* Action buttons */}
               <div className="flex gap-2 mt-3">
                 <button
                   onClick={handleInstall}
@@ -149,9 +211,12 @@ export default function InstallPWA() {
                 </button>
               </div>
             </div>
+
+            {/* Close button */}
             <button
               onClick={handleDismiss}
               className="text-white/60 hover:text-white transition-colors"
+              aria-label="Tutup"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -161,6 +226,7 @@ export default function InstallPWA() {
         </div>
       </div>
 
+      {/* ============ MODAL GUIDE iOS ============ */}
       {showIOSGuide && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[300] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full">
@@ -168,24 +234,34 @@ export default function InstallPWA() {
               <div className="text-5xl mb-2">📱</div>
               <h3 className="text-lg font-bold text-gray-800">Cara Install di iPhone</h3>
             </div>
+
             <div className="space-y-3 text-sm text-gray-700">
               <div className="flex gap-3">
                 <span className="font-bold text-[#8B3A1A] flex-shrink-0">1.</span>
-                <p>Tap tombol <strong>Share</strong> <span className="text-lg">⬆️</span> di bawah browser Safari</p>
+                <p>
+                  Tap tombol <strong>Share</strong> <span className="text-lg">⬆️</span> di bawah
+                  browser Safari
+                </p>
               </div>
               <div className="flex gap-3">
                 <span className="font-bold text-[#8B3A1A] flex-shrink-0">2.</span>
-                <p>Scroll ke bawah, tap <strong>"Add to Home Screen"</strong> <span className="text-lg">➕</span></p>
+                <p>
+                  Scroll ke bawah, tap <strong>"Add to Home Screen"</strong>{' '}
+                  <span className="text-lg">➕</span>
+                </p>
               </div>
               <div className="flex gap-3">
                 <span className="font-bold text-[#8B3A1A] flex-shrink-0">3.</span>
-                <p>Tap <strong>"Add"</strong> di kanan atas</p>
+                <p>
+                  Tap <strong>"Add"</strong> di kanan atas
+                </p>
               </div>
               <div className="flex gap-3">
                 <span className="font-bold text-[#8B3A1A] flex-shrink-0">4.</span>
                 <p>Aplikasi akan muncul di Home Screen HP kamu! 🎉</p>
               </div>
             </div>
+
             <button
               onClick={() => {
                 setShowIOSGuide(false);

@@ -12,14 +12,30 @@
     <meta name="apple-mobile-web-app-title" content="Surat Kemantren" />
     <meta name="mobile-web-app-capable" content="yes" />
 
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: http: https:; connect-src 'self' http: https: ws: wss:; frame-src 'self' http://localhost:5000 http://127.0.0.1:5000 http: https: blob:; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+    />
+    <meta
+      http-equiv="Permissions-Policy"
+      content="geolocation=(), camera=(), microphone=(), payment=(), usb=()"
+    />
+
     <link rel="manifest" href="/manifest.json" />
     <link id="dynamic-favicon" rel="icon" type="image/png" href="/logo.png" />
     <link id="dynamic-apple-icon" rel="apple-touch-icon" href="/logo.png" />
 
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
 
     <style>
-      html, body {
+      html,
+      body {
         margin: 0;
         padding: 0;
         width: 100%;
@@ -28,11 +44,14 @@
         -webkit-tap-highlight-color: transparent;
         overscroll-behavior: none;
       }
-      #root { width: 100%; height: 100%; }
+      #root {
+        width: 100%;
+        height: 100%;
+      }
       #loading {
         position: fixed;
         inset: 0;
-        background: linear-gradient(135deg, #8B3A1A 0%, #7C2D12 100%);
+        background: linear-gradient(135deg, #8b3a1a 0%, #7c2d12 100%);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -41,7 +60,9 @@
         color: white;
         font-family: 'Poppins', sans-serif;
       }
-      #loading.hidden { display: none; }
+      #loading.hidden {
+        display: none;
+      }
       .spinner {
         width: 50px;
         height: 50px;
@@ -51,14 +72,18 @@
         animation: spin 1s linear infinite;
         margin-bottom: 16px;
       }
-      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <body>
     <div id="root"></div>
     <div id="loading">
       <div class="spinner"></div>
-      <p style="font-weight: 500;">Memuat Aplikasi Surat...</p>
+      <p style="font-weight: 500">Memuat Aplikasi Surat...</p>
     </div>
 
     <script type="module" src="/src/main.tsx"></script>

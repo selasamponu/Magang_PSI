@@ -21,33 +21,24 @@ export default function KelolaUser({ currentUser }: Props) {
       setLoading(true);
       const data = await UserDB.getAll();
       setUserList(data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   useEffect(() => { refresh(); }, []);
 
   const openAdd = () => {
     setForm({ nama: '', username: '', password: '', role: 'operator' });
-    setEditMode(false);
-    setError('');
-    setShowForm(true);
+    setEditMode(false); setError(''); setShowForm(true);
   };
 
   const openEdit = (u: User) => {
     setForm({ nama: u.nama, username: u.username, password: '', role: u.role });
-    setEditId(u.id);
-    setEditMode(true);
-    setError('');
-    setShowForm(true);
+    setEditId(u.id); setEditMode(true); setError(''); setShowForm(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+    e.preventDefault(); setError('');
     try {
       if (editMode) {
         const updateData: any = { nama: form.nama, username: form.username, role: form.role };
@@ -59,11 +50,8 @@ export default function KelolaUser({ currentUser }: Props) {
         await UserDB.create({ nama: form.nama, username: form.username, password: form.password, role: form.role, status: 'aktif' } as any);
         await LogDB.create({ user_id: currentUser.username, nama_user: currentUser.nama, user_type: 'user', aktivitas: 'TAMBAH_USER', detail: `Tambah user ${form.username}` });
       }
-      setShowForm(false);
-      await refresh();
-    } catch (err: any) {
-      setError(err.message || 'Gagal menyimpan user');
-    }
+      setShowForm(false); await refresh();
+    } catch (err: any) { setError(err.message || 'Gagal menyimpan user'); }
   };
 
   const handleDelete = async (u: User) => {
@@ -73,14 +61,18 @@ export default function KelolaUser({ currentUser }: Props) {
         await UserDB.delete(u.id);
         await LogDB.create({ user_id: currentUser.username, nama_user: currentUser.nama, user_type: 'user', aktivitas: 'HAPUS_USER', detail: `Hapus user ${u.username}` });
         await refresh();
-      } catch (err) {
-        alert('Gagal menghapus user');
-      }
+      } catch (err) { alert('Gagal menghapus user'); }
     }
   };
 
+  const stats = {
+    total: userList.length,
+    admin: userList.filter(u => u.role === 'admin').length,
+    operator: userList.filter(u => u.role === 'operator').length,
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -95,145 +87,210 @@ export default function KelolaUser({ currentUser }: Props) {
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm card-hover">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total User</p>
-          <p className="text-3xl font-bold text-gray-800 mt-1">{userList.length}</p>
+      {/* KPI CARDS */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+        <div className="bg-white rounded-xl p-3 border border-gray-200 hover:shadow-md transition-all duration-200">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-sm shadow-sm flex-shrink-0">👨‍💼</div>
+            <p className="text-[11px] font-medium text-gray-600 leading-tight">Total User</p>
+          </div>
+          <p className="text-2xl font-bold text-gray-800 leading-none">{stats.total}</p>
         </div>
-        <div className="bg-gradient-to-br from-red-50 to-rose-100 rounded-2xl p-4 border border-red-200 card-hover">
-          <p className="text-xs font-semibold text-red-600 uppercase tracking-wider">Admin</p>
-          <p className="text-3xl font-bold text-red-700 mt-1">{userList.filter(u => u.role === 'admin').length}</p>
+        <div className="bg-red-50 rounded-xl p-3 border border-red-200 hover:shadow-md transition-all duration-200">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-sm shadow-sm flex-shrink-0">👑</div>
+            <p className="text-[11px] font-medium text-red-700 leading-tight">Admin</p>
+          </div>
+          <p className="text-2xl font-bold text-red-700 leading-none">{stats.admin}</p>
         </div>
-        <div className="bg-gradient-to-br from-blue-50 to-cyan-100 rounded-2xl p-4 border border-blue-200 card-hover">
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Operator</p>
-          <p className="text-3xl font-bold text-blue-700 mt-1">{userList.filter(u => u.role === 'operator').length}</p>
-        </div>
-      </div>
-
-      {/* Desktop Table */}
-      <div className="hidden md:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden card-hover">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gradient-to-r from-purple-50 to-pink-50">
-              <tr>
-                <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">ID</th>
-                <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Nama</th>
-                <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Username</th>
-                <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Role</th>
-                <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Status</th>
-                <th className="text-center px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Aksi</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {userList.map((u) => (
-                <tr key={u.id} className="hover:bg-purple-50/30 transition-colors">
-                  <td className="px-5 py-4 font-mono text-xs text-purple-600 font-semibold">#{u.id}</td>
-                  <td className="px-5 py-4 font-semibold text-gray-800">{u.nama}</td>
-                  <td className="px-5 py-4 font-mono text-xs text-gray-600">{u.username}</td>
-                  <td className="px-5 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      u.role === 'admin' 
-                        ? 'bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border border-red-200' 
-                        : 'bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border border-blue-200'
-                    }`}>
-                      {u.role === 'admin' ? '👑 Admin' : '👤 Operator'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      u.status === 'aktif' 
-                        ? 'bg-green-100 text-green-700 border border-green-200' 
-                        : 'bg-red-100 text-red-700 border border-red-200'
-                    }`}>
-                      {u.status === 'aktif' ? '✅ Aktif' : '⛔ Nonaktif'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex gap-1.5 justify-center">
-                      <button onClick={() => openEdit(u)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Edit">✏️</button>
-                      <button onClick={() => handleDelete(u)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors" title="Hapus">🗑️</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="bg-blue-50 rounded-xl p-3 border border-blue-200 hover:shadow-md transition-all duration-200">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center text-sm shadow-sm flex-shrink-0">🧑‍💼</div>
+            <p className="text-[11px] font-medium text-blue-700 leading-tight">Operator</p>
+          </div>
+          <p className="text-2xl font-bold text-blue-700 leading-none">{stats.operator}</p>
         </div>
       </div>
 
-      {/* Mobile Cards */}
-      <div className="md:hidden space-y-3">
-        {userList.map((u) => (
-          <div key={u.id} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 space-y-3 card-hover">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold text-white shadow-lg ${
-                  u.role === 'admin' ? 'bg-gradient-to-br from-red-500 to-rose-500' : 'bg-gradient-to-br from-blue-500 to-cyan-500'
-                }`}>
-                  {u.nama.charAt(0).toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
+      {/* DAFTAR USER — CARD */}
+      {userList.length === 0 ? (
+        <div className="bg-white rounded-2xl p-16 text-center border border-gray-100">
+          <div className="text-6xl mb-3">👨‍💼</div>
+          <p className="text-gray-400 font-medium">Belum ada user terdaftar</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {userList.map((u, idx) => (
+            <div
+              key={u.id}
+              className="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 rounded-2xl border border-gray-100 bg-white hover:border-purple-200 hover:bg-purple-50/20 hover:shadow-lg transition-all duration-200"
+            >
+              <div className={`hidden sm:flex items-center justify-center w-12 h-12 rounded-xl text-xl font-bold text-white shadow-md flex-shrink-0 ${
+                u.role === 'admin'
+                  ? 'bg-gradient-to-br from-red-500 to-rose-500'
+                  : 'bg-gradient-to-br from-blue-500 to-cyan-500'
+              }`}>
+                {u.nama.charAt(0).toUpperCase()}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-base">{u.role === 'admin' ? '👑' : '🧑‍💼'}</span>
                   <p className="font-semibold text-gray-800 truncate">{u.nama}</p>
-                  <p className="text-xs text-gray-400 font-mono mt-0.5">@{u.username}</p>
                 </div>
+                <p className="font-mono text-xs text-gray-500">@{u.username}</p>
+              </div>
+
+              <div className="flex-shrink-0 sm:border-l sm:border-gray-100 sm:pl-4 sm:min-w-[80px]">
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">ID User</p>
+                <p className="font-mono text-sm font-bold text-purple-600">#{u.id}</p>
+              </div>
+
+              <div className="flex-shrink-0 sm:border-l sm:border-gray-100 sm:pl-4">
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1 sm:hidden">Role</p>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                  u.role === 'admin'
+                    ? 'bg-gradient-to-r from-red-100 to-rose-100 text-red-700 border border-red-200'
+                    : 'bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border border-blue-200'
+                }`}>
+                  {u.role === 'admin' ? '👑 Admin' : '👤 Operator'}
+                </span>
+              </div>
+
+              <div className="flex-shrink-0 sm:border-l sm:border-gray-100 sm:pl-4">
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1 sm:hidden">Status</p>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${
+                  u.status === 'aktif'
+                    ? 'bg-green-100 text-green-700 border border-green-200'
+                    : 'bg-red-100 text-red-700 border border-red-200'
+                }`}>
+                  {u.status === 'aktif' ? '✅ Aktif' : '⛔ Nonaktif'}
+                </span>
+              </div>
+
+              <div className="flex gap-1.5 flex-shrink-0 sm:border-l sm:border-gray-100 sm:pl-4">
+                <button onClick={() => openEdit(u)} className="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Edit">
+                  ✏️
+                </button>
+                <button onClick={() => handleDelete(u)} className="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors" title="Hapus">
+                  🗑️
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
-              }`}>
-                {u.role === 'admin' ? '👑 Admin' : '👤 Operator'}
-              </span>
-              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                u.status === 'aktif' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-              }`}>
-                {u.status === 'aktif' ? '✅ Aktif' : '⛔ Nonaktif'}
-              </span>
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => openEdit(u)} className="flex-1 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-semibold">✏️ Edit</button>
-              <button onClick={() => handleDelete(u)} className="flex-1 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-semibold">🗑️ Hapus</button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* Form Modal */}
-      <Modal isOpen={showForm} onClose={() => setShowForm(false)} title={editMode ? 'Edit User' : 'Tambah User'}>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Nama</label>
-            <input type="text" value={form.nama} onChange={e => setForm({...form, nama: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" required />
+      {/* ============================================================ */}
+      {/* FORM MODAL — DARK THEME                                       */}
+      {/* ============================================================ */}
+      <Modal
+        isOpen={showForm}
+        onClose={() => setShowForm(false)}
+        title={editMode ? 'Edit User' : 'Tambah User'}
+        size="lg"
+      >
+        <form onSubmit={handleSubmit} className="space-y-5" autoComplete="off">
+
+          {/* Info Box Mode Edit */}
+          {editMode && (
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4">
+              <p className="text-sm font-semibold text-amber-300">Mode Edit</p>
+              <p className="text-xs text-amber-200/80 mt-1">
+                Kosongkan password jika tidak ingin mengubahnya.
+              </p>
+            </div>
+          )}
+
+          {/* Section Data Akun — DARK CARD */}
+          <div className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50 space-y-4">
+
+            {/* Nama */}
+            <div>
+              <label className="block text-sm font-semibold text-amber-400 mb-2">
+                Nama Lengkap <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.nama}
+                onChange={e => setForm({ ...form, nama: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-100 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 focus:bg-white transition-all"
+                placeholder="Nama lengkap user"
+                required
+              />
+            </div>
+
+            {/* Username */}
+            <div>
+              <label className="block text-sm font-semibold text-amber-400 mb-2">
+                Username <span className="text-red-400">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.username}
+                onChange={e => setForm({ ...form, username: e.target.value })}
+                className="w-full px-4 py-3 bg-gray-100 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 focus:bg-white transition-all font-mono"
+                placeholder="username (tanpa spasi)"
+                required
+              />
+              <p className="text-xs text-gray-400 mt-1">Username dipakai untuk login, tidak boleh ada spasi</p>
+            </div>
+
+            {/* Role */}
+            <div>
+              <label className="block text-sm font-semibold text-amber-400 mb-2">
+                Role / Hak Akses <span className="text-red-400">*</span>
+              </label>
+              <select
+                value={form.role}
+                onChange={e => setForm({ ...form, role: e.target.value as 'admin' | 'operator' })}
+                className="w-full px-4 py-3 bg-gray-100 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 focus:bg-white transition-all"
+              >
+                <option value="admin">Admin — Akses penuh ke semua fitur</option>
+                <option value="operator">Operator — Akses terbatas (verifikasi surat)</option>
+              </select>
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
-            <input type="text" value={form.username} onChange={e => setForm({...form, username: e.target.value})} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" required />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Password {editMode && <span className="text-xs text-gray-400">(kosongkan jika tidak diubah)</span>}
-            </label>
-            <input 
-              type="password" 
-              value={form.password} 
-              onChange={e => setForm({...form, password: e.target.value})} 
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300" 
-              placeholder={editMode ? '••••••' : 'Min 6 karakter'} 
-              required={!editMode} 
+
+          {/* Section Password — DARK CARD */}
+          <div className="bg-gray-800/50 rounded-2xl p-5 border border-gray-700/50 space-y-3">
+            <div>
+              <p className="text-sm font-semibold text-amber-400">Password Akun</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {editMode ? 'Kosongkan jika tidak ingin mengubah password' : 'Minimal 6 karakter'}
+              </p>
+            </div>
+            <input
+              type="password"
+              value={form.password}
+              onChange={e => setForm({ ...form, password: e.target.value })}
+              className="w-full px-4 py-3 bg-gray-100 border-2 border-gray-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 focus:bg-white transition-all"
+              placeholder={editMode ? '•••••• (biarkan kosong jika tidak diubah)' : 'Minimal 6 karakter'}
+              required={!editMode}
+              autoComplete="new-password"
             />
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Role</label>
-            <select value={form.role} onChange={e => setForm({...form, role: e.target.value as 'admin' | 'operator'})} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300">
-              <option value="admin">👑 Admin</option>
-              <option value="operator">👤 Operator</option>
-            </select>
-          </div>
-          {error && <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-600 text-sm flex items-center gap-2">⚠️ {error}</div>}
-          <div className="flex gap-2 justify-end pt-2">
-            <button type="button" onClick={() => setShowForm(false)} className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-50">Batal</button>
-            <button type="submit" className="px-5 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 shadow-lg shadow-purple-500/30">
+
+          {/* Error */}
+          {error && (
+            <div className="bg-red-500/20 border-2 border-red-500/40 rounded-xl p-4 text-red-300 text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Tombol Aksi */}
+          <div className="flex flex-col sm:flex-row gap-2 justify-end pt-3 border-t border-gray-700/50">
+            <button
+              type="button"
+              onClick={() => setShowForm(false)}
+              className="px-5 py-2.5 border border-gray-600 rounded-xl text-sm font-semibold text-gray-300 hover:bg-gray-700/30 transition-colors"
+            >
+              Batal
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-semibold hover:opacity-90 shadow-lg shadow-purple-500/30 transition-all"
+            >
               {editMode ? 'Update' : 'Simpan'}
             </button>
           </div>

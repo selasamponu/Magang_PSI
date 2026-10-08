@@ -12,8 +12,8 @@ export default function LogAktivitasPage() {
       setLoading(true);
       let data = await LogDB.getAll();
       if (filter) {
-        data = data.filter((l: LogAktivitas) => 
-          l.aktivitas.toLowerCase().includes(filter.toLowerCase()) || 
+        data = data.filter((l: LogAktivitas) =>
+          l.aktivitas.toLowerCase().includes(filter.toLowerCase()) ||
           l.nama_user.toLowerCase().includes(filter.toLowerCase())
         );
       }
@@ -29,20 +29,20 @@ export default function LogAktivitasPage() {
 
   const aktivitasBadge = (aktivitas: string) => {
     const map: Record<string, string> = {
-      LOGIN: 'bg-blue-100 text-blue-700 border-blue-200',
-      LOGOUT: 'bg-gray-100 text-gray-700 border-gray-200',
-      KIRIM_SURAT: 'bg-purple-100 text-purple-700 border-purple-200',
-      VERIFIKASI_SURAT: 'bg-green-100 text-green-700 border-green-200',
-      TAMBAH_WARGA: 'bg-teal-100 text-teal-700 border-teal-200',
-      UPDATE_WARGA: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-      HAPUS_WARGA: 'bg-red-100 text-red-700 border-red-200',
-      TAMBAH_USER: 'bg-teal-100 text-teal-700 border-teal-200',
-      UPDATE_USER: 'bg-yellow-100 text-yellow-700 border-yellow-200',
-      HAPUS_USER: 'bg-red-100 text-red-700 border-red-200',
-      BUAT_SURAT_KELUAR: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-      REGISTER: 'bg-pink-100 text-pink-700 border-pink-200',
+      LOGIN: 'bg-blue-100 text-blue-700 border border-blue-200',
+      LOGOUT: 'bg-gray-100 text-gray-700 border border-gray-200',
+      KIRIM_SURAT: 'bg-purple-100 text-purple-700 border border-purple-200',
+      VERIFIKASI_SURAT: 'bg-green-100 text-green-700 border border-green-200',
+      TAMBAH_WARGA: 'bg-teal-100 text-teal-700 border border-teal-200',
+      UPDATE_WARGA: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
+      HAPUS_WARGA: 'bg-red-100 text-red-700 border border-red-200',
+      TAMBAH_USER: 'bg-teal-100 text-teal-700 border border-teal-200',
+      UPDATE_USER: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
+      HAPUS_USER: 'bg-red-100 text-red-700 border border-red-200',
+      BUAT_SURAT_KELUAR: 'bg-indigo-100 text-indigo-700 border border-indigo-200',
+      REGISTER: 'bg-pink-100 text-pink-700 border border-pink-200',
     };
-    return map[aktivitas] || 'bg-gray-100 text-gray-700 border-gray-200';
+    return map[aktivitas] || 'bg-gray-100 text-gray-700 border border-gray-200';
   };
 
   const aktivitasIcon = (aktivitas: string) => {
@@ -63,8 +63,15 @@ export default function LogAktivitasPage() {
     return map[aktivitas] || '📋';
   };
 
+  const stats = {
+    total: logs.length,
+    login: logs.filter(l => l.aktivitas === 'LOGIN').length,
+    kirimSurat: logs.filter(l => l.aktivitas === 'KIRIM_SURAT').length,
+    verifikasi: logs.filter(l => l.aktivitas === 'VERIFIKASI_SURAT').length,
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -83,43 +90,46 @@ export default function LogAktivitasPage() {
         </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm card-hover">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">📋</span>
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Total</p>
-              <p className="text-2xl font-bold text-gray-800">{logs.length}</p>
+      {/* KPI CARDS — KECIL & RAPI */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="bg-white rounded-xl p-3 border border-gray-200 hover:shadow-md transition-all duration-200">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-gray-600 to-gray-700 flex items-center justify-center text-sm shadow-sm flex-shrink-0">
+              📋
             </div>
+            <p className="text-[11px] font-medium text-gray-600 leading-tight">Total Log</p>
           </div>
+          <p className="text-2xl font-bold text-gray-800 leading-none">{stats.total}</p>
         </div>
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200 card-hover">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🔑</span>
-            <div>
-              <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider">Login</p>
-              <p className="text-2xl font-bold text-blue-700">{logs.filter(l => l.aktivitas === 'LOGIN').length}</p>
+
+        <div className="bg-blue-50 rounded-xl p-3 border border-blue-200 hover:shadow-md transition-all duration-200">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-sm shadow-sm flex-shrink-0">
+              🔑
             </div>
+            <p className="text-[11px] font-medium text-blue-700 leading-tight">Login</p>
           </div>
+          <p className="text-2xl font-bold text-blue-700 leading-none">{stats.login}</p>
         </div>
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-4 border border-purple-200 card-hover">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">📨</span>
-            <div>
-              <p className="text-xs font-semibold text-purple-600 uppercase tracking-wider">Kirim Surat</p>
-              <p className="text-2xl font-bold text-purple-700">{logs.filter(l => l.aktivitas === 'KIRIM_SURAT').length}</p>
+
+        <div className="bg-purple-50 rounded-xl p-3 border border-purple-200 hover:shadow-md transition-all duration-200">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center text-sm shadow-sm flex-shrink-0">
+              📨
             </div>
+            <p className="text-[11px] font-medium text-purple-700 leading-tight">Kirim Surat</p>
           </div>
+          <p className="text-2xl font-bold text-purple-700 leading-none">{stats.kirimSurat}</p>
         </div>
-        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 border border-green-200 card-hover">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">✅</span>
-            <div>
-              <p className="text-xs font-semibold text-green-600 uppercase tracking-wider">Verifikasi</p>
-              <p className="text-2xl font-bold text-green-700">{logs.filter(l => l.aktivitas === 'VERIFIKASI_SURAT').length}</p>
+
+        <div className="bg-green-50 rounded-xl p-3 border border-green-200 hover:shadow-md transition-all duration-200">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-sm shadow-sm flex-shrink-0">
+              ✅
             </div>
+            <p className="text-[11px] font-medium text-green-700 leading-tight">Verifikasi</p>
           </div>
+          <p className="text-2xl font-bold text-green-700 leading-none">{stats.verifikasi}</p>
         </div>
       </div>
 
@@ -134,112 +144,70 @@ export default function LogAktivitasPage() {
             placeholder="Cari aktivitas atau nama user..."
             value={filter}
             onChange={e => setFilter(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all"
+            className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
           />
         </div>
       </div>
 
-      {/* Desktop Table */}
-      <div className="hidden lg:block bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden card-hover">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gradient-to-r from-purple-50 to-pink-50">
-              <tr>
-                <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">ID Log</th>
-                <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">User</th>
-                <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Tipe</th>
-                <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Aktivitas</th>
-                <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Detail</th>
-                <th className="text-left px-5 py-4 font-semibold text-gray-700 text-xs uppercase tracking-wider">Waktu</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {logs.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-16">
-                  <div className="text-6xl mb-3">📋</div>
-                  <p className="text-gray-400 font-medium">Belum ada log aktivitas</p>
-                  <p className="text-gray-300 text-xs mt-1">Aktivitas user akan tercatat di sini</p>
-                </td></tr>
-              ) : logs.map((l) => (
-                <tr key={l.id_log} className="hover:bg-purple-50/30 transition-colors">
-                  <td className="px-5 py-4 font-mono text-xs text-gray-500 max-w-[140px] truncate">{l.id_log}</td>
-                  <td className="px-5 py-4">
-                    <p className="font-semibold text-gray-800">{l.nama_user}</p>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                      l.user_type === 'user' 
-                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' 
-                        : 'bg-green-100 text-green-700 border border-green-200'
-                    }`}>
-                      {l.user_type === 'user' ? '👨‍💼 User' : '👤 Warga'}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${aktivitasBadge(l.aktivitas)}`}>
-                      <span>{aktivitasIcon(l.aktivitas)}</span>
-                      {l.aktivitas}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4 max-w-[240px] truncate text-gray-600 text-xs">{l.detail}</td>
-                  <td className="px-5 py-4 text-gray-500 text-xs whitespace-nowrap">
-                    {new Date(l.tanggal_waktu).toLocaleString('id-ID', { 
-                      day: '2-digit', month: 'short', year: 'numeric',
-                      hour: '2-digit', minute: '2-digit'
-                    })}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* DAFTAR LOG — CARD */}
+      {logs.length === 0 ? (
+        <div className="bg-white rounded-2xl p-16 text-center border border-gray-100">
+          <div className="text-6xl mb-3">📋</div>
+          <p className="text-gray-400 font-medium">Belum ada log aktivitas</p>
+          <p className="text-gray-300 text-xs mt-1">Aktivitas user akan tercatat di sini</p>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-3">
+          {logs.map((l, idx) => (
+            <div
+              key={l.id_log}
+              className="group flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 rounded-2xl border border-gray-100 bg-white hover:border-purple-200 hover:bg-purple-50/20 hover:shadow-lg transition-all duration-200"
+            >
+              <div className="hidden sm:flex items-center justify-center w-11 h-11 bg-gradient-to-br from-gray-600 to-gray-700 text-white rounded-xl text-sm font-bold shadow-md flex-shrink-0">
+                {idx + 1}
+              </div>
 
-      {/* Mobile Cards */}
-      <div className="lg:hidden space-y-3">
-        {logs.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
-            <div className="text-5xl mb-3">📋</div>
-            <p className="text-gray-400 font-medium">Belum ada log aktivitas</p>
-          </div>
-        ) : logs.map((l) => (
-          <div key={l.id_log} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-4 space-y-3 card-hover">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl ${
-                  l.user_type === 'user' ? 'bg-indigo-100' : 'bg-green-100'
-                }`}>
-                  {aktivitasIcon(l.aktivitas)}
-                </div>
-                <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="text-base">{aktivitasIcon(l.aktivitas)}</span>
                   <p className="font-semibold text-gray-800 truncate">{l.nama_user}</p>
-                  <p className="text-xs text-gray-400 font-mono truncate mt-0.5">{l.id_log}</p>
+                </div>
+                <p className={`inline-block font-mono text-xs px-2 py-0.5 rounded-md ${
+                  l.user_type === 'user' ? 'bg-indigo-50 text-indigo-700' : 'bg-green-50 text-green-700'
+                }`}>
+                  {l.user_type === 'user' ? '👨‍💼 User' : '👤 Warga'}
+                </p>
+              </div>
+
+              <div className="flex-1 min-w-0 sm:border-l sm:border-gray-100 sm:pl-4">
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Aktivitas</p>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${aktivitasBadge(l.aktivitas)}`}>
+                  <span>{aktivitasIcon(l.aktivitas)}</span>
+                  <span>{l.aktivitas}</span>
+                </span>
+              </div>
+
+              <div className="flex-1 min-w-0 sm:border-l sm:border-gray-100 sm:pl-4">
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Detail</p>
+                <p className="text-sm text-gray-700 line-clamp-2">{l.detail}</p>
+              </div>
+
+              <div className="flex-shrink-0 sm:border-l sm:border-gray-100 sm:pl-4 sm:min-w-[130px]">
+                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Waktu</p>
+                <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                  <span>🕐</span>
+                  <span className="whitespace-nowrap">
+                    {new Date(l.tanggal_waktu).toLocaleString('id-ID', {
+                      day: '2-digit', month: 'short', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit',
+                    })}
+                  </span>
                 </div>
               </div>
             </div>
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${aktivitasBadge(l.aktivitas)}`}>
-              <span>{aktivitasIcon(l.aktivitas)}</span>
-              {l.aktivitas}
-            </span>
-            <p className="text-sm text-gray-600 line-clamp-2">{l.detail}</p>
-            <div className="flex items-center gap-2 flex-wrap pt-1">
-              <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                l.user_type === 'user' 
-                  ? 'bg-indigo-100 text-indigo-700' 
-                  : 'bg-green-100 text-green-700'
-              }`}>
-                {l.user_type === 'user' ? '👨‍💼 User' : '👤 Warga'}
-              </span>
-              <span className="text-xs text-gray-400">
-                {new Date(l.tanggal_waktu).toLocaleString('id-ID', { 
-                  day: '2-digit', month: 'short',
-                  hour: '2-digit', minute: '2-digit'
-                })}
-              </span>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
